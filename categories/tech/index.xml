@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>TECH on Aeric Blog</title>
+    <link>https://aeric.io/categories/tech/</link>
+    <description>Recent content in TECH on Aeric Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 10 Jan 2019 14:37:01 +0800</lastBuildDate>
+    
+	<atom:link href="https://aeric.io/categories/tech/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>记一次harbor的升级之旅</title>
+      <link>https://aeric.io/post/harbor-upgrade-guide/</link>
+      <pubDate>Thu, 10 Jan 2019 14:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/harbor-upgrade-guide/</guid>
+      <description>之前安装的 harbor版本是 v1.6的版本，由于在 v1.7版本中新增加了对 helm的支持，所以为了更充分的利用 harbor 镜像仓库，我们将进行一次升级</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群安装Metrics Server</title>
+      <link>https://aeric.io/post/k8s-metrics-server-installation/</link>
+      <pubDate>Fri, 04 Jan 2019 12:23:36 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-metrics-server-installation/</guid>
+      <description>Kubernetes 1.8 关于资源使用情况的 metrics，可以通过 Metrics API 获取到 Kubernetes 1.11 已经废弃 heapster。这里我们基于 Kubernetes 1.12 版本安装 Metrics Server。 Metrics Server 的安装 首先</description>
+    </item>
+    
+    <item>
+      <title>容器化部署 Mesos 集群</title>
+      <link>https://aeric.io/post/mesos-container-cluster-installation/</link>
+      <pubDate>Thu, 06 Dec 2018 16:34:08 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/mesos-container-cluster-installation/</guid>
+      <description>整个 mesos 集群主要由 Zookeeper、Mesos、Marathon 和 Docker 几个组件构成，各组件用途及扮演的角色信息如下所示： Zookeeper: Zookeeper 是一个分布式的，开</description>
+    </item>
+    
+    <item>
+      <title>Linux 配置 RabbitMQ 集群</title>
+      <link>https://aeric.io/post/rabbitmq-cluster-installation/</link>
+      <pubDate>Sun, 02 Dec 2018 16:48:15 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/rabbitmq-cluster-installation/</guid>
+      <description>一般情况下，如果只是为了探究 RabbitMQ 或者验证业务工程的正确性那么在本地环境或者测试环境上使用其单实例部署就可以了，但是出于 MQ 中间件本身的可靠性、并</description>
+    </item>
+    
+    <item>
+      <title>Linux 配置 RabbitMQ 服务</title>
+      <link>https://aeric.io/post/rabbitmq-single-installation/</link>
+      <pubDate>Sun, 02 Dec 2018 16:47:46 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/rabbitmq-single-installation/</guid>
+      <description>RabbitMQ 是由 LShift 提供的一个 Advanced Message Queuing Protocol (AMQP) 的开源实现，由以高性能、健壮以及可伸缩性出名的 Erlang 开发设计，因此也是继承了这些优点。 本文档旨在基于 Erlang 环境在 CentOS 7 系统</description>
+    </item>
+    
+    <item>
+      <title>RabbitMQ Erlang 环境配置</title>
+      <link>https://aeric.io/post/rabbitmq-erlang-installation/</link>
+      <pubDate>Sun, 02 Dec 2018 16:46:51 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/rabbitmq-erlang-installation/</guid>
+      <description>Erlang 是一种多用途编程语言，主要用于开发并发和分布式系统。它最初是一种专有的编程语言，Ericsson 使用它来开发电话和通信应用程序。 本文档旨在</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes 集群创建 TLS 证书及密钥</title>
+      <link>https://aeric.io/post/k8s-create-tls-and-keys/</link>
+      <pubDate>Fri, 30 Nov 2018 14:05:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-create-tls-and-keys/</guid>
+      <description>集群环境如下： k8s-master: 192.168.8.66 k8s-nodes: 192.168.8.67 192.168.8.68 k8s-harbor: 192.168.8.69 创建TLS证书及密钥 kubernetes系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成</description>
+    </item>
+    
+  </channel>
+</rss>

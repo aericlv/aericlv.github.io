@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on Aeric Blog</title>
+    <link>https://aeric.io/tags/</link>
+    <description>Recent content in Tags on Aeric Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 10 Jan 2019 14:37:01 +0800</lastBuildDate>
+    
+	<atom:link href="https://aeric.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Docker</title>
+      <link>https://aeric.io/tags/docker/</link>
+      <pubDate>Thu, 10 Jan 2019 14:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/docker/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Docker-compose</title>
+      <link>https://aeric.io/tags/docker-compose/</link>
+      <pubDate>Thu, 10 Jan 2019 14:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/docker-compose/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Erlang</title>
+      <link>https://aeric.io/tags/erlang/</link>
+      <pubDate>Sun, 02 Dec 2018 16:48:15 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/erlang/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Harbor</title>
+      <link>https://aeric.io/tags/harbor/</link>
+      <pubDate>Thu, 10 Jan 2019 14:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/harbor/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Kubernetes</title>
+      <link>https://aeric.io/tags/kubernetes/</link>
+      <pubDate>Fri, 04 Jan 2019 12:23:36 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/kubernetes/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Mesos</title>
+      <link>https://aeric.io/tags/mesos/</link>
+      <pubDate>Thu, 06 Dec 2018 16:34:08 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/mesos/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Metrics</title>
+      <link>https://aeric.io/tags/metrics/</link>
+      <pubDate>Fri, 04 Jan 2019 12:23:36 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/metrics/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>RabbitMQ</title>
+      <link>https://aeric.io/tags/rabbitmq/</link>
+      <pubDate>Sun, 02 Dec 2018 16:48:15 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/rabbitmq/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Zookeeper</title>
+      <link>https://aeric.io/tags/zookeeper/</link>
+      <pubDate>Thu, 06 Dec 2018 16:34:08 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/zookeeper/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
