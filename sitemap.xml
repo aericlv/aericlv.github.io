@@ -3,6 +3,16 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://aeric.io/post/mesos-cluster-installation-b/</loc>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aeric.io/post/mesos-cluster-installation-a/</loc>
+    <lastmod>2019-01-12T20:43:44+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://aeric.io/post/harbor-upgrade-guide/</loc>
     <lastmod>2019-01-10T14:37:01+08:00</lastmod>
   </url>
@@ -51,7 +61,7 @@
   
   <url>
     <loc>https://aeric.io/</loc>
-    <lastmod>2019-01-10T14:37:01+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -62,7 +72,7 @@
   
   <url>
     <loc>https://aeric.io/tags/docker/</loc>
-    <lastmod>2019-01-10T14:37:01+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -91,8 +101,14 @@
   </url>
   
   <url>
+    <loc>https://aeric.io/tags/marathon/</loc>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://aeric.io/tags/mesos/</loc>
-    <lastmod>2018-12-06T16:34:08+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -104,7 +120,7 @@
   
   <url>
     <loc>https://aeric.io/post/</loc>
-    <lastmod>2019-01-10T14:37:01+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -121,13 +137,13 @@
   
   <url>
     <loc>https://aeric.io/categories/tech/</loc>
-    <lastmod>2019-01-10T14:37:01+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://aeric.io/tags/</loc>
-    <lastmod>2019-01-10T14:37:01+08:00</lastmod>
+    <lastmod>2019-01-12T20:44:13+08:00</lastmod>
     <priority>0</priority>
   </url>
   

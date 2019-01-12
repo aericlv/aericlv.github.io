@@ -6,7 +6,7 @@
     <description>Recent content in Tags on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 10 Jan 2019 14:37:01 +0800</lastBuildDate>
+    <lastBuildDate>Sat, 12 Jan 2019 20:44:13 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>Docker</title>
       <link>https://aeric.io/tags/docker/</link>
-      <pubDate>Thu, 10 Jan 2019 14:37:01 +0800</pubDate>
+      <pubDate>Sat, 12 Jan 2019 20:44:13 +0800</pubDate>
       
       <guid>https://aeric.io/tags/docker/</guid>
       <description></description>
@@ -57,9 +57,18 @@
     </item>
     
     <item>
+      <title>Marathon</title>
+      <link>https://aeric.io/tags/marathon/</link>
+      <pubDate>Sat, 12 Jan 2019 20:44:13 +0800</pubDate>
+      
+      <guid>https://aeric.io/tags/marathon/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Mesos</title>
       <link>https://aeric.io/tags/mesos/</link>
-      <pubDate>Thu, 06 Dec 2018 16:34:08 +0800</pubDate>
+      <pubDate>Sat, 12 Jan 2019 20:44:13 +0800</pubDate>
       
       <guid>https://aeric.io/tags/mesos/</guid>
       <description></description>
