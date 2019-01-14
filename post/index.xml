@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 12 Jan 2019 20:44:13 +0800</lastBuildDate>
+    <lastBuildDate>Mon, 14 Jan 2019 20:30:33 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>mkcert:本地有效的https证书</title>
+      <link>https://aeric.io/post/mkcert-valid-https-certificates-for-localhost/</link>
+      <pubDate>Mon, 14 Jan 2019 20:30:33 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/mkcert-valid-https-certificates-for-localhost/</guid>
+      <description>随着 HTTPS 的越来越普及，现在绝大数的 WEB 网站已经支持了全站 HTTPS，来防止网络攻击者观察或注入页面内容等，这里介绍一种在本地生成 TLS 证书的工具: mkcert</description>
+    </item>
     
     <item>
       <title>Mesos集群二进制方式部署二 </title>
