@@ -317,13 +317,18 @@ Written new values to /harbor-migration/harbor-cfg/harbor.cfg
 $ cp -f /srv/harbor_older/harbor.cfg /srv/harbor/
 </code></pre>
 
-<p>执行升级过程：</p>
+<p>配置文件更新完成后，就可以升级了，需要注意的是默认新版 harbor 不会启用 <code>chart repository service</code>，如果需要管理 <code>helm</code>，我们需要在安装时添加额外的参数，例如：</p>
 
-<pre><code class="language-bash">$ cd /srv/harbor
+<pre><code class="language-bash">## 默认安装
+$ cd /srv/harbor
 $ ./install.sh
+
+## 启动 chart repository service 服务
+$ cd /srv/harbor
+$ ./install.sh --with-chartmuseum
 </code></pre>
 
-<p>等待安装完成即可，安装完成后会有如下提示：</p>
+<p>等待安装完成即可，安装完成后会有如下类似提示：</p>
 
 <pre><code class="language-bash">...
 ✔ ----Harbor has been installed and started successfully.----
