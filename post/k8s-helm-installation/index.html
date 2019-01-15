@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="本文档旨在在 CentOS 7 系统上安装配置 Erlang 环境，因为 RabbitMQ 是基于 Erlang 开发设计的，所以本文档主要服务于后续 RabbitMQ 的安装和配置。">
+    <meta name="description" content="Helm Chart 是用来封装 Kubernetes 原生应用程序的一系列 YAML 文件。可以在你部署应用的时候自定义应用程序的一些 Metadata，以便于应用程序的分发。本文档在 Kubernetes 集群安装 Helm">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>RabbitMQ Erlang 环境配置-吕啸腾的博客</title>
+    <title>K8S 包管理工具 Helm - 安装-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/rabbitmq-erlang-installation/">
+    <link rel="canonical" href="/post/k8s-helm-installation/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1fxtcf65mzfj21ja0o67ev.jpg')
+        background-image: url('https://wx4.sinaimg.cn/large/b258d7f7ly1fz7feo1nrej21ja0loamp.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,24 +143,24 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/rabbitmq" title="RabbitMQ">
-                            RabbitMQ
+                        <a class="tag" href="/tags/helm" title="Helm">
+                            Helm
                         </a>
                         
-                        <a class="tag" href="/tags/erlang" title="Erlang">
-                            Erlang
+                        <a class="tag" href="/tags/kubernetes" title="Kubernetes">
+                            Kubernetes
                         </a>
                         
                     </div>
-                    <h1>RabbitMQ Erlang 环境配置</h1>
+                    <h1>K8S 包管理工具 Helm - 安装</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
 			
-			         Eric
+			         Aeric
 			 
 			on 
-			Sunday, December 2, 2018
+			Tuesday, January 15, 2019
                         
                     </span>
                 </div>
@@ -186,73 +186,165 @@
                 <header>
                     <h2>TOC</h2>
                 </header>
+                <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#安装-helm-客户端">安装 Helm 客户端</a></li>
+<li><a href="#安装-helm-服务端-tiller">安装 Helm 服务端 Tiller</a></li>
+<li><a href="#kubernetes-rbac配置">Kubernetes RBAC配置</a></li>
+<li><a href="#验证-tiller-是否安装成功">验证 Tiller 是否安装成功</a></li>
+<li><a href="#卸载-helm-服务端-tiller">卸载 Helm 服务端 Tiller</a></li>
+</ul></li>
+</ul>
+</nav>
                 
                 
-                <p>Erlang 是一种多用途编程语言，主要用于开发并发和分布式系统。它最初是一种专有的编程语言，Ericsson 使用它来开发电话和通信应用程序。</p>
 
-<p>本文档旨在在 CentOS 7 系统上安装配置 Erlang 环境，因为 RabbitMQ 是基于 Erlang 开发设计的，所以本文档主要服务于后续 RabbitMQ 的安装和配置。</p>
+<p>前期在 Kubernetes 集群中部署应用多少有点不适应，因为我们需要维护的资源配置清单 yaml 文件随着应用的增加，对应的文件也越来越多，这就在一定程度上导致了以下几个问题：</p>
 
-<p>其他系统的安装配置可以参考 Erlang 的官方站点相关文档：<a href="https://www.erlang.org">https://www.erlang.org</a></p>
+<ul>
+<li>如何管理，编辑和更新这些这些分散的kubernetes应用配置文件</li>
+<li>可不可以把一套的相关配置文件作为一个应用进行管理</li>
+<li>如何分发和重用 kubernetes 的应用配置</li>
+</ul>
 
-<p>Erlang 官方库文件参见<a href="https://packages.erlang-solutions.com/erlang/">Erlang repository page</a>, 我们需要根据我们的需要下载对应的版本。本次我们选择用 rpm 的方式安装。</p>
+<p>而 Helm 的出现就解决了这些问题，它封装 Kubernetes 原生应用程序的一系列 YAML 文件。可以在你部署应用的时候自定义应用程序的一些 Metadata，以便于应用程序的分发。下面在 Kubernetes 集群中部署 Helm，具体过程参考如下描述：</p>
 
-<p>系统基本环境如下：</p>
+<p>Helm 的安装方式很多，这里采用二进制的方式安装。具体安装方法可以参考 <a href="https://docs.helm.sh/">Helm 的官方帮助文档</a>。同时安装 Helm 也可以参考 <a href="https://github.com/helm/helm/blob/master/docs/install.md">GitHub 官方文档</a></p>
 
-<pre><code class="language-bash">$ cat /etc/redhat-release
-CentOS Linux release 7.5.1804 (Core)
+<h2 id="安装-helm-客户端">安装 Helm 客户端</h2>
 
-$ uname -r
-3.10.0-862.el7.x86_64
+<p><strong>使用官方提供的脚本一键安装</strong></p>
+
+<pre><code class="language-bash">$ curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get &gt; get_helm.sh
+$ chmod 700 get_helm.sh
+$ ./get_helm.sh
 </code></pre>
 
-<p>下载基本依赖软件：</p>
+<p><strong>手动下载二进制文件安装</strong></p>
 
-<pre><code class="language-bash">$ yum update -y
-$ yum install epel-release -y
-$ yum install gcc gcc-c++ glibc-devel make ncurses-devel openssl-devel autoconf git wget wxBase.x86_64
+<pre><code class="language-bash"># Helm 安装版本为 v2.9.1，其他版本类似
+
+# 下载 Helm
+$ wget https://storage.googleapis.com/kubernetes-helm/helm-v2.9.1-linux-amd64.tar.gz
+# 解压 Helm
+$ tar -zxvf helm-v2.9.1-linux-amd64.tar.gz
+# 复制客户端执行文件到 bin 目录下
+$ cp linux-amd64/helm /usr/local/bin/
 </code></pre>
 
-<p>下载 Erlang 软件：</p>
+<h2 id="安装-helm-服务端-tiller">安装 Helm 服务端 Tiller</h2>
 
-<pre><code class="language-bash">$ mkdir /opt/soft
-$ cd /opt/soft
-$ wget http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
-$ rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
+<p>Tiller 是以 Deployment 方式部署在 Kubernetes 集群中的，只需使用以下指令便可简单的完成安装。</p>
+
+<pre><code class="language-bash">helm init --upgrade
 </code></pre>
 
-<p>导入 Erlang  相关 key：</p>
+<p>在缺省配置下， Helm 会利用 <code>gcr.io/kubernetes-helm/tiller</code>  镜像在 Kubernetes 集群上安装配置 Tiller；并且利用 &ldquo;<a href="https://kubernetes-charts.storage.googleapis.com&quot;">https://kubernetes-charts.storage.googleapis.com&quot;</a> 作为缺省的 <code>stable repository</code>  的地址。由于在国内可能无法访问 <code>gcr.io</code>，<code>storage.googleapis.com</code> 等域名，阿里云容器服务为此提供了镜像站点。</p>
 
-<pre><code class="language-bash">$ rpm --import https://packages.erlang-solutions.com/rpm/erlang_solutions.asc
+<p>更换阿里云镜像站点如下：</p>
+
+<pre><code class="language-bash"># 配置阿里云镜像安装并把默认仓库设置为阿里云上的镜像仓库
+$ helm init --upgrade --tiller-image registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.9.1 --stable-repo-url https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
 </code></pre>
 
-<p>修改 repo 文件，启用 gpg 校验功能:</p>
+<p>安装完成后，将看到如下类似信息输出：</p>
 
-<pre><code class="language-bash">[erlang-solutions]
-name=CentOS $releasever - $basearch - Erlang Solutions
-baseurl=https://packages.erlang-solutions.com/rpm/centos/$releasever/$basearch
-gpgcheck=1    # 修改此参数，将 0 改为 1
-gpgkey=https://packages.erlang-solutions.com/rpm/erlang_solutions.asc
-enabled=1
+<pre><code class="language-bash">$ helm init --upgrade
+$HELM_HOME has been configured at /Users/test/.helm.
+
+Tiller (the helm server side component) has been installed into your Kubernetes Cluster.
+Happy Helming!
 </code></pre>
 
-<p>安装 Erlang：</p>
+<h2 id="kubernetes-rbac配置">Kubernetes RBAC配置</h2>
 
-<pre><code class="language-bash">$ yum makecache
-$ yum install erlang -y
+<p>自 Kubernetes 1.6 版本开始，API Server 启用了 RBAC 授权。而目前的 Tiller 部署没有定义授权的 ServiceAccount ，这会导致访问 API Server 时被拒绝。我们可以采用如下方法，明确为 Tiller 部署添加授权。</p>
+
+<p>创建 Kubernetes 的服务帐号和角色绑定：</p>
+
+<pre><code class="language-bash">kubectl create serviceaccount --namespace kube-system tiller
+kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
 </code></pre>
 
-<p>等待安装完成即可。</p>
+<p>或者利用如下的 yaml 配置文件创建服务账号和授权，创建 <code>rbac-config.yaml</code>：</p>
 
-<p>Erlang 安装完成后，可以用如下命令检查其版本：</p>
-
-<pre><code class="language-bash">$ erl
-Erlang/OTP 21 [erts-10.1] [source] [64-bit] [smp:1:1] [ds:1:1:10] [async-threads:1] [hipe]
-
-Eshell V10.1  (abort with ^G)
-1&gt;
+<pre><code>apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
 </code></pre>
 
-<p>这样，我们已经成功安装了 Erlang。</p>
+<p>在 Kubernetes 集群中授权：</p>
+
+<pre><code class="language-bash">$ kubectl apply -f rbac-config.yaml
+</code></pre>
+
+<p>为 Tiller 设置帐号：</p>
+
+<pre><code class="language-bash"># 使用 kubectl patch 更新 API 对象
+$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{&quot;spec&quot;:{&quot;template&quot;:{&quot;spec&quot;:{&quot;serviceAccount&quot;:&quot;tiller&quot;}}}}'
+deployment.extensions &quot;tiller-deploy&quot; patched
+</code></pre>
+
+<p>查看是否授权成功:</p>
+
+<pre><code class="language-bash">$ kubectl get deploy --namespace kube-system tiller-deploy --output yaml | grep serviceAccount
+      serviceAccount: tiller
+      serviceAccountName: tiller
+</code></pre>
+
+<p>当出现上述信息表示已经授权成功！</p>
+
+<h2 id="验证-tiller-是否安装成功">验证 Tiller 是否安装成功</h2>
+
+<p>当 Helm 和 Tiller 安装完成并且已经授权成功后，可以通过 <code>kubectl</code> 检查是否安装完成：</p>
+
+<pre><code class="language-bash">$ kubectl get pods -n kube-system | grep tiller
+tiller-deploy-7fdbf6766f-w9wd9          1/1       Running   0          2d
+
+$ helm version
+Client: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+</code></pre>
+
+<blockquote>
+<p>有时候当我们执行 <code>helm version</code> 时，会输出连接 <code>Server</code> 端时和 <code>socat</code> 相关的报错的信息，这是我们没有安装 <code>socat</code> 软件，我们需要在所有集群节点上安装 <code>socat</code></p>
+</blockquote>
+
+<p>在所有节点上安装 <code>socat</code> :</p>
+
+<pre><code class="language-bash">$ yum install socat -y
+</code></pre>
+
+<p>当安装完成后再执行 <code>helm version</code> 一般就不会报错了，当输出类似如下信息时表示 Helm 和 Tiller 安装成功。</p>
+
+<pre><code class="language-bash">$ helm version
+Client: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+</code></pre>
+
+<h2 id="卸载-helm-服务端-tiller">卸载 Helm 服务端 Tiller</h2>
+
+<p>如果你需要在 Kubernetes 中卸载已部署的 Tiller，可使用以下命令完成卸载：</p>
+
+<pre><code class="language-bash">$ helm reset
+</code></pre>
 
 
                 
@@ -301,13 +393,13 @@ Eshell V10.1  (abort with ^G)
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/k8s-create-tls-and-keys/" data-toggle="tooltip" data-placement="top" title="Kubernetes 集群创建 TLS 证书及密钥">&larr;
+                        <a href="/post/k8s-helm-introduction/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 介绍">&larr;
                             Previous Post</a>
                     </li>
                     
                     
                     <li class="next">
-                        <a href="/post/rabbitmq-single-installation/" data-toggle="tooltip" data-placement="top" title="Linux 配置 RabbitMQ 服务">Next
+                        <a href="/post/k8s-helm-application/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 应用">Next
                             Post &rarr;</a>
                     </li>
                     

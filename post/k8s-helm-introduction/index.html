@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="本文档旨在在 CentOS 7 系统上安装配置 Erlang 环境，因为 RabbitMQ 是基于 Erlang 开发设计的，所以本文档主要服务于后续 RabbitMQ 的安装和配置。">
+    <meta name="description" content="Helm 是 Kubernetes 生态系统中的一个软件包管理工具，Helm是由 Deis 发起的一个开源工具，有助于简化部署和管理 Kubernetes 应用。 它有点类似于 Ubuntu 中的 APT 或 CentOS 中的 YUM">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>RabbitMQ Erlang 环境配置-吕啸腾的博客</title>
+    <title>K8S 包管理工具 Helm - 介绍-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/rabbitmq-erlang-installation/">
+    <link rel="canonical" href="/post/k8s-helm-introduction/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1fxtcf65mzfj21ja0o67ev.jpg')
+        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1fyaxax6i27j21ja0lon64.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,24 +143,24 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/rabbitmq" title="RabbitMQ">
-                            RabbitMQ
+                        <a class="tag" href="/tags/helm" title="Helm">
+                            Helm
                         </a>
                         
-                        <a class="tag" href="/tags/erlang" title="Erlang">
-                            Erlang
+                        <a class="tag" href="/tags/kubernetes" title="Kubernetes">
+                            Kubernetes
                         </a>
                         
                     </div>
-                    <h1>RabbitMQ Erlang 环境配置</h1>
+                    <h1>K8S 包管理工具 Helm - 介绍</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
 			
-			         Eric
+			         Aeric
 			 
 			on 
-			Sunday, December 2, 2018
+			Tuesday, January 15, 2019
                         
                     </span>
                 </div>
@@ -186,73 +186,92 @@
                 <header>
                     <h2>TOC</h2>
                 </header>
+                <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#helm-基本概念">Helm 基本概念</a></li>
+<li><a href="#helm-基本组件">Helm 基本组件</a></li>
+<li><a href="#helm-的工作原理">Helm 的工作原理</a></li>
+</ul></li>
+</ul>
+</nav>
                 
                 
-                <p>Erlang 是一种多用途编程语言，主要用于开发并发和分布式系统。它最初是一种专有的编程语言，Ericsson 使用它来开发电话和通信应用程序。</p>
 
-<p>本文档旨在在 CentOS 7 系统上安装配置 Erlang 环境，因为 RabbitMQ 是基于 Erlang 开发设计的，所以本文档主要服务于后续 RabbitMQ 的安装和配置。</p>
+<p><a href="https://helm.sh">Helm</a> 是 Kubernetes 生态系统中的一个软件包管理工具，Helm 是由 <a href="https://deis.com/">Deis</a> 发起的一个开源工具，有助于简化部署和管理 Kubernetes 应用。 它有点类似于 Ubuntu 中的 APT 或 CentOS 中的 YUM</p>
 
-<p>其他系统的安装配置可以参考 Erlang 的官方站点相关文档：<a href="https://www.erlang.org">https://www.erlang.org</a></p>
+<p>Helm 官方网站：<a href="https://helm.sh">https://helm.sh</a></p>
 
-<p>Erlang 官方库文件参见<a href="https://packages.erlang-solutions.com/erlang/">Erlang repository page</a>, 我们需要根据我们的需要下载对应的版本。本次我们选择用 rpm 的方式安装。</p>
+<p>Helm GitHub 地址: <a href="https://github.com/helm/helm">https://github.com/helm/helm</a></p>
 
-<p>系统基本环境如下：</p>
+<h2 id="helm-基本概念">Helm 基本概念</h2>
 
-<pre><code class="language-bash">$ cat /etc/redhat-release
-CentOS Linux release 7.5.1804 (Core)
+<p>Helm 可以理解为 Kubernetes 的包管理工具，可以方便地发现、共享和使用为 Kubernetes 构建的应用，它包含几个基本概念</p>
 
-$ uname -r
-3.10.0-862.el7.x86_64
-</code></pre>
+<ul>
+<li><strong>Helm :</strong>  一个命令行下的客户端工具。主要用于 Kubernetes 应用程序 Chart 的创建、打包、发布以及创建和管理本地和远程的 Chart 仓库。</li>
 
-<p>下载基本依赖软件：</p>
+<li><p><strong>Tiller :</strong>  Helm 的服务端，部署在 Kubernetes 集群中。Tiller 用于接收 Helm 的请求，并根据 Chart 生成 Kubernetes 的部署文件（ Helm 称为 Release ），然后提交给 Kubernetes 创建应用。Tiller 还提供了 Release 的升级、删除、回滚等一系列功能。</p></li>
 
-<pre><code class="language-bash">$ yum update -y
-$ yum install epel-release -y
-$ yum install gcc gcc-c++ glibc-devel make ncurses-devel openssl-devel autoconf git wget wxBase.x86_64
-</code></pre>
+<li><p><strong>Chart :</strong>  一个 Helm 包，其中包含了运行一个应用所需要的镜像、依赖和资源定义等，还可能包含 Kubernetes 集群中的服务定义，类似 Homebrew 中的 formula，APT 的 dpkg 或者 Yum 的 rpm 文件。</p></li>
 
-<p>下载 Erlang 软件：</p>
+<li><p><strong>Release :</strong>   在 Kubernetes 集群上运行的 Chart 的一个实例。在同一个集群上，一个 Chart 可以安装很多次。每次安装都会创建一个新的 release。例如一个 MySQL Chart，如果想在服务器上运行两个数据库，就可以把这个 Chart 安装两次。每次安装都会生成自己的 Release，会有自己的 Release 名称。</p></li>
 
-<pre><code class="language-bash">$ mkdir /opt/soft
-$ cd /opt/soft
-$ wget http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
-$ rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
-</code></pre>
+<li><p><strong>Repository ：</strong> 用于发布和存储 Chart 的仓库。</p></li>
+</ul>
 
-<p>导入 Erlang  相关 key：</p>
+<h2 id="helm-基本组件">Helm 基本组件</h2>
 
-<pre><code class="language-bash">$ rpm --import https://packages.erlang-solutions.com/rpm/erlang_solutions.asc
-</code></pre>
+<p>Helm 采用客户端/服务器架构，有如下基本组件组成：</p>
 
-<p>修改 repo 文件，启用 gpg 校验功能:</p>
+<ul>
+<li><strong>Helm CLI</strong> 是 Helm 客户端，可以在本地执行。</li>
+<li><strong>Tiller</strong> 是服务器端组件，在 Kubernetes 群集上运行，并管理 Kubernetes 应用程序的生命周期。</li>
+<li><strong>Repository</strong> 是 Chart 仓库，Helm客户端通过HTTP协议来访问仓库中Chart的索引文件和压缩包。</li>
+</ul>
 
-<pre><code class="language-bash">[erlang-solutions]
-name=CentOS $releasever - $basearch - Erlang Solutions
-baseurl=https://packages.erlang-solutions.com/rpm/centos/$releasever/$basearch
-gpgcheck=1    # 修改此参数，将 0 改为 1
-gpgkey=https://packages.erlang-solutions.com/rpm/erlang_solutions.asc
-enabled=1
-</code></pre>
+<p>Helm 各个基本组件之间的关系如下图所示：</p>
 
-<p>安装 Erlang：</p>
+<p><img src="https://wx2.sinaimg.cn/large/b258d7f7ly1fz7f6u5lq4j20qe0gstb6.jpg" alt="Helm 各个基本组件之间的关系" /></p>
 
-<pre><code class="language-bash">$ yum makecache
-$ yum install erlang -y
-</code></pre>
+<h2 id="helm-的工作原理">Helm 的工作原理</h2>
 
-<p>等待安装完成即可。</p>
+<p>上面列出了 Helm 的基本组件及其用途，而 Helm 的工作过程和这些组件的功能用途是分不开的， Helm 依赖这些组件来完成整个工作流程，下面列出几个重要的工作过程，包括应用的安装、更新、回滚等流程。具体内容如下所述：</p>
 
-<p>Erlang 安装完成后，可以用如下命令检查其版本：</p>
+<p><strong>应用安装（chart install）</strong></p>
 
-<pre><code class="language-bash">$ erl
-Erlang/OTP 21 [erts-10.1] [source] [64-bit] [smp:1:1] [ds:1:1:10] [async-threads:1] [hipe]
+<ul>
+<li><p>Helm 从指定的目录或者 TAR 文件中解析出 Chart 结构信息。</p></li>
 
-Eshell V10.1  (abort with ^G)
-1&gt;
-</code></pre>
+<li><p>Helm 将指定的 Chart 结构和 Values 信息通过 gRPC 传递给 Tiller。</p></li>
 
-<p>这样，我们已经成功安装了 Erlang。</p>
+<li><p>Tiller 根据 Chart 和 Values 生成一个 Release。</p></li>
+
+<li><p>Tiller 将 Release 发送给 Kubernetes 用于生成 Release。</p></li>
+</ul>
+
+<p><strong>应用更新（chart update）</strong></p>
+
+<ul>
+<li>Helm 从指定的目录或者 TAR 文件中解析出 Chart 结构信息。</li>
+<li>Helm 将需要更新的 Release 的名称、Chart 结构和 Values 信息传递给 Tiller。</li>
+<li>Tiller 生成 Release 并更新指定名称的 Release 的 History。</li>
+<li>Tiller 将 Release 发送给 Kubernetes 用于更新 Release。</li>
+</ul>
+
+<p><strong>应用回滚（chart rollback）</strong></p>
+
+<ul>
+<li>Helm 将要回滚的 Release 的名称传递给 Tiller。</li>
+<li>Tiller 根据 Release 的名称查找 History。</li>
+<li>Tiller 从 History 中获取上一个 Release。</li>
+<li>Tiller 将上一个 Release 发送给 Kubernetes 用于替换当前 Release。</li>
+</ul>
+
+<p><strong>Chart 处理依赖说明</strong>：</p>
+
+<p>Tiller 在处理 Chart 时，直接将 Chart 以及其依赖的所有 Charts 合并为一个 Release，同时传递给 Kubernetes。因此 Tiller 并不负责管理依赖之间的启动顺序。Chart 中的应用需要能够自行处理依赖关系。</p>
 
 
                 
@@ -301,13 +320,13 @@ Eshell V10.1  (abort with ^G)
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/k8s-create-tls-and-keys/" data-toggle="tooltip" data-placement="top" title="Kubernetes 集群创建 TLS 证书及密钥">&larr;
+                        <a href="/post/mkcert-valid-https-certificates-for-localhost/" data-toggle="tooltip" data-placement="top" title="mkcert:本地有效的https证书">&larr;
                             Previous Post</a>
                     </li>
                     
                     
                     <li class="next">
-                        <a href="/post/rabbitmq-single-installation/" data-toggle="tooltip" data-placement="top" title="Linux 配置 RabbitMQ 服务">Next
+                        <a href="/post/k8s-helm-installation/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 安装">Next
                             Post &rarr;</a>
                     </li>
                     
