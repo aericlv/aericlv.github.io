@@ -8,7 +8,7 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="之前已经在 kubernetes 集群中已经安装了 Helm 和 Tiller，那么接下来需要熟悉一下 Helm 的基本应用，主要包括借助 Helm 创建、打包、分发到本地仓库等等基本操作。">
+    <meta name="description" content="之前已经在 kubernetes 集群中安装了 Helm 和 Tiller，那么接下来需要熟悉一下 Helm 的基本应用，主要包括利用 Helm 创建、打包、分发到本地仓库等等基本操作。">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
@@ -197,9 +197,13 @@
 </ul></li>
 <li><a href="#打包应用">打包应用</a></li>
 <li><a href="#将打包应用发布到-repository">将打包应用发布到 Repository</a></li>
-<li><a href="#设置helm命令自动补全">设置helm命令自动补全</a>
+<li><a href="#检查配置和模板是否有效">检查配置和模板是否有效</a></li>
+<li><a href="#部署应用到-kubernetes-集群">部署应用到 Kubernetes 集群</a></li>
+<li><a href="#管理部署的-release">管理部署的 Release</a>
 <ul>
-<li><a href="#其他配置项">其他配置项</a></li>
+<li><a href="#升级-release">升级 Release</a></li>
+<li><a href="#回滚-release">回滚 Release</a></li>
+<li><a href="#删除-release">删除 Release</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -207,7 +211,7 @@
                 
                 
 
-<p>之前已经在 kubernetes 集群中已经安装了 Helm 和 Tiller，那么接下来我们需要熟悉一下 Helm 的基本应用，主要包括借助 Helm 创建、打包、分发、安装、升级及回滚 kubernetes 应用。</p>
+<p>之前在 kubernetes 集群中已经安装了 Helm 和 Tiller，那么接下来我们需要熟悉一下 Helm 的基本应用，主要包括利用 Helm 创建、打包、分发、安装、升级及回滚 kubernetes 应用。</p>
 
 <h2 id="创建-helm-chart">创建 Helm Chart</h2>
 
@@ -479,7 +483,13 @@ spec:
 Successfully packaged chart and saved it to: /opt/workspace/mychart-0.1.0.tgz
 </code></pre>
 
-<p>mychart 目录会被打包为一个 <code>mychart-0.1.0.tgz</code>  格式的压缩包，该压缩包会被放到当前目录下，并同时被保存到了 Helm 的本地缺省仓库目录中。</p>
+<p>mychart 目录会被打包为一个 <code>mychart-0.1.0.tgz</code>  格式的压缩包，该压缩包默认会被放到当前目录下，并同时被保存到了 Helm 的本地缺省仓库目录中。</p>
+
+<p>如果打包时需要自定义压缩包的存放位置可以在打包时增加 <code>-d</code>参数，例如：</p>
+
+<pre><code class="language-bash">$ helm package -d /opt/ mychart/
+Successfully packaged chart and saved it to: /opt/mychart-0.1.0.tgz
+</code></pre>
 
 <p>如果需要查看已打包的应用的具体地址，可以在打包的时候加上 <code>--debug</code> 参数，具体输出内容如下：</p>
 
@@ -521,55 +531,366 @@ NAME         	CHART VERSION	APP VERSION	DESCRIPTION
 local/mychart	0.2.0        	1.0        	A Helm chart for Kubernetes
 </code></pre>
 
-<h2 id="设置helm命令自动补全">设置helm命令自动补全</h2>
+<p>其实我们还可以将我们自己打包的 Charts 文件上传至我们的私有 helm 仓库，helm 私有仓库可以用 harbor 实现，具体用 harbor 怎样来管理 helm charts 可以参考：<a href="https://aeric.io/post/harbor-manage-helm-charts">用 Harbor 管理 Helm Charts</a></p>
 
-<p>为了方便 helm 命令的使用，helm 提供了自动补全功能，如果使用 zsh 请执行：</p>
+<p>当我们设置完 Chart 配置并将其发布到 Repositry 后就可以使用 <code>helm install</code> 命令将应用发布到 Kubernetes 集群中，发布完成后还可以用 Helm 管理对应的 Kubernetes 应用，可以进行版本的升级和回滚等操作。</p>
 
-<pre><code class="language-bash">source &lt;(helm completion zsh)
+<h2 id="检查配置和模板是否有效">检查配置和模板是否有效</h2>
+
+<p>当使用 <code>helm install</code> 命令部署应用时，实际上就是将 templates 目录下的模板文件渲染成 Kubernetes 能够识别的 YAML 格式。</p>
+
+<p>当我们修改好 Chart 文件后，可以用如下命令检查配置和模板是否有效：</p>
+
+<pre><code class="language-bash">helm install --dry-run --debug &lt;chart_dir&gt; --name &lt;release_name&gt;
 </code></pre>
 
-<p>如果使用 bash 请执行：</p>
+<p>上述命令输出中包含了模板的变量配置与最终渲染的 YAML 文件，例如:</p>
 
-<pre><code class="language-bash">source &lt;(helm completion bash)
+<pre><code>$ helm install --dry-run --debug mychart
+
+[debug] Created tunnel using local port: '36589'
+
+[debug] SERVER: &quot;127.0.0.1:36589&quot;
+
+[debug] Original chart version: &quot;&quot;
+[debug] CHART PATH: /opt/workspace/mychart
+
+NAME:   youngling-flee
+REVISION: 1
+RELEASED: Mon Aug 27 10:56:07 2018
+CHART: mychart-0.1.0
+USER-SUPPLIED VALUES:
+{}
+
+COMPUTED VALUES:
+affinity: {}
+image:
+  pullPolicy: IfNotPresent
+  repository: nginx
+  tag: stable
+ingress:
+  annotations: {}
+  enabled: false
+  hosts:
+  - chart-example.local
+  path: /
+  tls: []
+nodeSelector: {}
+replicaCount: 1
+resources: {}
+service:
+  port: 80
+  type: ClusterIP
+tolerations: []
+
+HOOKS:
+MANIFEST:
+
+---
+# Source: mychart/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: youngling-flee-mychart
+  labels:
+    app: mychart
+    chart: mychart-0.1.0
+    release: youngling-flee
+    heritage: Tiller
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: mychart
+    release: youngling-flee
+---
+# Source: mychart/templates/deployment.yaml
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: youngling-flee-mychart
+  labels:
+    app: mychart
+    chart: mychart-0.1.0
+    release: youngling-flee
+    heritage: Tiller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mychart
+      release: youngling-flee
+  template:
+    metadata:
+      labels:
+        app: mychart
+        release: youngling-flee
+    spec:
+      containers:
+        - name: mychart
+          image: &quot;nginx:stable&quot;
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+</code></pre>
+
+<h2 id="部署应用到-kubernetes-集群">部署应用到 Kubernetes 集群</h2>
+
+<p>验证完成没有问题后，我们就可以使用以下命令将其部署到 Kubernetes 上了:</p>
+
+<pre><code class="language-bash"># 部署时需指定 Chart 名及 Release（部署的实例）名。
+$ helm install local/mychart --name helm-test
+NAME:   helm-test
+LAST DEPLOYED: Mon Aug 27 11:28:28 2018
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==&gt; v1/Service
+NAME               TYPE       CLUSTER-IP     EXTERNAL-IP  PORT(S)  AGE
+helm-test-mychart  ClusterIP  10.254.128.14  &lt;none&gt;       80/TCP   3s
+
+==&gt; v1beta2/Deployment
+NAME               DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+helm-test-mychart  1        0        0           0          3s
+
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace default -l &quot;app=mychart,release=helm-test&quot; -o jsonpath=&quot;{.items[0].metadata.name}&quot;)
+  echo &quot;Visit http://127.0.0.1:8080 to use your application&quot;
+  kubectl port-forward $POD_NAME 8080:80
 </code></pre>
 
 <blockquote>
-<p>如果仅仅执行上述命令是不能达到我们预期的，当新开一个 bash 终端后是不能自动补全的，这就需要我们再做些配置，具体的就是将上述命令写到 <code>/etc/profile</code> 或者 <code>~/.bashrc</code> 文件下。</p>
+<p>上述命令也可以在<code>mychart</code>目录下执行 <code>helm install .</code>将 nginx 部署到 kubernetes 集群上</p>
 </blockquote>
 
-<pre><code class="language-bash">echo &quot;source &lt;(helm completion bash)&quot; &gt;&gt; ~/.bashrc
+<p>现在 nginx 已经部署到 kubernetes 集群上，本地执行提示中的命令在本地主机上访问到 nginx 实例：</p>
+
+<pre><code class="language-bash">$ export POD_NAME=$(kubectl get pods --namespace default -l &quot;app=mychart,release=helm-test&quot; -o jsonpath=&quot;{.items[0].metadata.name}&quot;)
+$ echo &quot;Visit http://127.0.0.1:8080 to use your application&quot;
+$ kubectl port-forward $POD_NAME 8080:80
 </code></pre>
 
-<h3 id="其他配置项">其他配置项</h3>
+<p>具体访问效果如下图所示：</p>
 
-<p>在新版本下默认情况下，启动本地服务后，搜索 chart 是没问题的，但是有时候也会出现本地服务连接失效的问题，当出现此问题后我们可以尝试按如下步骤操作，有些步骤是可以不做的，例如，更改存储路径等。</p>
+<pre><code class="language-html">$ curl -s http://127.0.0.1:8090
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+&lt;style&gt;
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+&lt;p&gt;If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.&lt;/p&gt;
 
-<p>默认情况下该服务只监听 127.0.0.1，如果你要绑定到其它网络接口，可使用以下命令：</p>
+&lt;p&gt;For online documentation and support please refer to
+&lt;a href=&quot;http://nginx.org/&quot;&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+Commercial support is available at
+&lt;a href=&quot;http://nginx.com/&quot;&gt;nginx.com&lt;/a&gt;.&lt;/p&gt;
 
-<pre><code class="language-bash">$ helm serve --address $yourIP:8879 &amp;
+&lt;p&gt;&lt;em&gt;Thank you for using nginx.&lt;/em&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
 </code></pre>
 
-<p>如果你想使用指定目录来做为 Helm Repository 的存储目录，可以加上 <code>--repo-path</code> 参数：</p>
+<h2 id="管理部署的-release">管理部署的 Release</h2>
 
-<pre><code class="language-bash">$ helm serve --address $yourIP:8879 --repo-path /data/helm/repository/ --url http://$yourIP:8879/charts/
+<p>当部署 Release 到 Kubernetes 集群后，可以使用下面的命令列出的所有已部署的 Release 以及其对应的 Chart：</p>
+
+<pre><code class="language-bash">$ helm list
+NAME     	REVISION	UPDATED                 	STATUS  	CHART        	NAMESPACE
+helm-test	1       	Mon Aug 27 11:28:28 2018	DEPLOYED	mychart-0.2.0	default  
 </code></pre>
 
-<p>同时也可以通过 <code>helm repo index</code> 命令将 Chart 的 Metadata 记录更新在 index.yaml 文件中:</p>
+<p>不仅如此，我们还可以用下面命令查看某个 Release 的具体状态：</p>
 
-<pre><code class="language-bash"># 更新 Helm Repository 的索引文件
-$ cd /home/k8s/.helm/repository/local
-$ helm repo index --url=http://$yourIP:8879 .
+<pre><code class="language-bash">$ helm status helm-test
+LAST DEPLOYED: Mon Aug 27 11:28:28 2018
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==&gt; v1/Service
+NAME               TYPE       CLUSTER-IP     EXTERNAL-IP  PORT(S)  AGE
+helm-test-mychart  ClusterIP  10.254.128.14  &lt;none&gt;       80/TCP   11m
+
+==&gt; v1beta2/Deployment
+NAME               DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+helm-test-mychart  1        1        1           1          11m
+
+==&gt; v1/Pod(related)
+NAME                                READY  STATUS   RESTARTS  AGE
+helm-test-mychart-6cdfc4d97c-vbwx5  1/1    Running  0         11m
+
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace default -l &quot;app=mychart,release=helm-test&quot; -o jsonpath=&quot;{.items[0].metadata.name}&quot;)
+  echo &quot;Visit http://127.0.0.1:8080 to use your application&quot;
+  kubectl port-forward $POD_NAME 8080:80
 </code></pre>
 
-<p>完成启动本地 Helm Repository Server 后，就可以将本地 Repository 加入 Helm 的 Repo 列表并更新 repo:</p>
+<p>也可以用如下命令查看已部署应用的详细信息：</p>
 
-<pre><code class="language-bash">$ helm repo add local http://127.0.0.1:8879
-&quot;local&quot; has been added to your repositories
-
-$ helm repo update
+<pre><code class="language-bash">$ helm get helm-test
 </code></pre>
 
-<p>将本地 Repository 加入 Helm 的 Repo 列表后再次搜索 chart 一般就可以得到结果了，如果还有报错，可以依据报错信息查找问题再解决问题。</p>
+<h3 id="升级-release">升级 Release</h3>
+
+<p>从上面 <code>helm list</code> 输出的结果中我们可以看到有一个 Revision（更改历史）字段，该字段用于表示某一个 Release 被更新的次数，我们可以用该特性对已部署的 Release 进行更新。</p>
+
+<p><strong>模拟应用升级</strong></p>
+
+<p>首先，需要修改 <code>Chart.yaml</code> 文件，将应用版本从 <code>0.2.0</code> 修改为 <code>0.3.0</code> ，然后使用 <code>helm package</code> 命令打包并发布到本地仓库：</p>
+
+<pre><code class="language-bash">$ cd mychart/
+$ cat Chart.yaml 
+apiVersion: v1
+appVersion: &quot;1.0&quot;
+description: A Helm chart for Kubernetes
+name: mychart
+version: 0.3.0
+
+$ helm package mychart
+Successfully packaged chart and saved it to: /opt/workspace/mychart-0.3.0.tgz
+</code></pre>
+
+<p>查询本地仓库版本：</p>
+
+<pre><code class="language-bash">$ helm search mychart -l
+NAME         	CHART VERSION	APP VERSION	DESCRIPTION                
+local/mychart	0.3.0        	1.0        	A Helm chart for Kubernetes
+local/mychart	0.2.0        	1.0        	A Helm chart for Kubernetes
+local/mychart	0.1.0        	1.0        	A Helm chart for Kubernetes
+</code></pre>
+
+<p>升级应用</p>
+
+<p>用 <code>helm upgrade</code> 命令将已部署的 helm-test 升级到新版本:</p>
+
+<pre><code class="language-bash">$ helm upgrade helm-test local/mychart
+Release &quot;helm-test&quot; has been upgraded. Happy Helming!
+</code></pre>
+
+<blockquote>
+<p>你可以通过 <code>--version</code> 参数指定需要升级的版本号，如果没有指定版本号，则默认使用最新版本</p>
+</blockquote>
+
+<p>升级完成后再次查看，注意观察 <code>Revision</code> 字段：</p>
+
+<pre><code class="language-bash">$ helm list
+NAME     	REVISION	UPDATED                 	STATUS  	CHART        	NAMESPACE
+helm-test	2       	Mon Aug 27 11:58:10 2018	DEPLOYED	mychart-0.3.0	default  
+</code></pre>
+
+<p>可以看到 <code>Revision</code> 字段由原来的 1 变成了 2，<code>Chart</code> 字段也由 <code>mychart-0.2.0</code> 升级到了 <code>mychart-0.3.0</code> ,表示升级完成。</p>
+
+<h3 id="回滚-release">回滚 Release</h3>
+
+<p>如果更新后的程序运行有问题，需要回退到旧版本的应用。当遇到这种问题后我们可以使用 <code>helm history</code> 命令查看一个 Release 的所有变更记录：</p>
+
+<pre><code class="language-bash">$ helm history helm-test
+REVISION	UPDATED                 	STATUS    	CHART        	DESCRIPTION     
+1       	Mon Aug 27 11:28:28 2018	SUPERSEDED	mychart-0.2.0	Install complete
+2       	Mon Aug 27 11:58:10 2018	DEPLOYED  	mychart-0.3.0	Upgrade complete
+</code></pre>
+
+<p>当我们知道了应用的变更记录后，我们可以选择回退应用到指定版本：</p>
+
+<pre><code class="language-bash">$ helm rollback helm-test 1
+Rollback was a success! Happy Helming!
+</code></pre>
+
+<blockquote>
+<p>其中的参数 1 是 helm history 查看到 Release 的历史记录中 REVISION 对应的值</p>
+</blockquote>
+
+<p>再次查看 Release 的变更记录：</p>
+
+<pre><code class="language-bash">$ helm history helm-test
+REVISION	UPDATED                 	STATUS    	CHART        	DESCRIPTION     
+1       	Mon Aug 27 11:28:28 2018	SUPERSEDED	mychart-0.2.0	Install complete
+2       	Mon Aug 27 11:58:10 2018	SUPERSEDED	mychart-0.3.0	Upgrade complete
+3       	Mon Aug 27 12:06:26 2018	DEPLOYED  	mychart-0.2.0	Rollback to 1   
+</code></pre>
+
+<p>再次查看现有 Release ：</p>
+
+<pre><code class="language-bash">$ helm list
+NAME     	REVISION	UPDATED                 	STATUS  	CHART        	NAMESPACE
+helm-test	3       	Mon Aug 27 12:06:26 2018	DEPLOYED	mychart-0.2.0	default  
+</code></pre>
+
+<p>可以看到 <code>Revision</code> 字段由原来的 2 变成了 3，<code>Chart</code> 字段也由 <code>mychart-0.3.0</code> 回退到了 <code>mychart-0.2.0</code> ,表示回退应用完成。</p>
+
+<h3 id="删除-release">删除 Release</h3>
+
+<p>删除应用比较方便，如果需要删除一个已部署的 Release，可以利用 <code>helm delete</code> 命令来完成删除：</p>
+
+<pre><code class="language-bash">$ helm delete helm-test
+release &quot;helm-test&quot; deleted
+$ helm list
+</code></pre>
+
+<p>当我们删除应用后我们可以使用如下命令查看被删除应用的状态：</p>
+
+<pre><code class="language-bash">$ helm list -a
+NAME     	REVISION	UPDATED                 	STATUS 	CHART        	NAMESPACE
+helm-test	3       	Mon Aug 27 12:06:26 2018	DELETED	mychart-0.2.0	default  
+</code></pre>
+
+<p>由上述内容可知被删除的应用已经被标记为 <code>DELETED</code> 状态。</p>
+
+<p>也可以使用 <code>--deleted</code> 参数来列出已经删除的 Release ：</p>
+
+<pre><code class="language-bash">$ helm list --deleted 
+NAME     	REVISION	UPDATED                 	STATUS 	CHART        	NAMESPACE
+helm-test	3       	Mon Aug 27 12:06:26 2018	DELETED	mychart-0.2.0	default  
+</code></pre>
+
+<p>查看被删除应用的历史变更记录：</p>
+
+<pre><code class="language-bash">$ helm history helm-test
+REVISION	UPDATED                 	STATUS    	CHART        	DESCRIPTION      
+1       	Mon Aug 27 11:28:28 2018	SUPERSEDED	mychart-0.2.0	Install complete 
+2       	Mon Aug 27 11:58:10 2018	SUPERSEDED	mychart-0.3.0	Upgrade complete 
+3       	Mon Aug 27 12:06:26 2018	DELETED   	mychart-0.2.0	Deletion complete
+</code></pre>
+
+<p>有时候我们需要移除指定 Release 所有相关的 Kubernetes 资源和 Release 的历史记录，我们可以利用如下命令：</p>
+
+<pre><code class="language-bash">$ helm delete --purge helm-test
+release &quot;helm-test&quot; deleted
+
+$ helm history helm-test
+Error: release: &quot;helm-test&quot; not found
+</code></pre>
 
 
                 
@@ -622,6 +943,11 @@ $ helm repo update
                             Previous Post</a>
                     </li>
                     
+                    
+                    <li class="next">
+                        <a href="/post/harbor-manage-helm-charts/" data-toggle="tooltip" data-placement="top" title="用 Harbor 管理 Helm Charts">Next
+                            Post &rarr;</a>
+                    </li>
                     
                 </ul>
 
@@ -680,6 +1006,10 @@ $ helm repo update
                         </a>
                         
                         
+                        
+                        <a href="/tags/harbor" title="Harbor">
+                            Harbor
+                        </a>
                         
                         
                         

@@ -6,10 +6,19 @@
     <description>Recent content in Kubernetes on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 15 Jan 2019 17:43:22 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 18 Jan 2019 10:42:37 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/tags/kubernetes/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>用 Harbor 管理 Helm Charts</title>
+      <link>https://aeric.io/post/harbor-manage-helm-charts/</link>
+      <pubDate>Fri, 18 Jan 2019 10:42:37 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/harbor-manage-helm-charts/</guid>
+      <description>在 v1.6 版本的 harbor 中新增加了 helm charts 的管理功能,这样就可以利用 harbor 同时管理镜像和 helm charts 了，在部署 kubernetes 相关应用时就比较方便，本次尝试用 harbor 来管理 helm charts。</description>
+    </item>
     
     <item>
       <title>K8S 包管理工具 Helm - 应用</title>
@@ -17,7 +26,7 @@
       <pubDate>Tue, 15 Jan 2019 17:43:22 +0800</pubDate>
       
       <guid>https://aeric.io/post/k8s-helm-application/</guid>
-      <description>之前已经在 kubernetes 集群中已经安装了 Helm 和 Tiller，那么接下来我们需要熟悉一下 Helm 的基本应用，主要包括借助 Helm 创建、打包、分发、安装、升级及回滚 kubernetes 应用</description>
+      <description>之前在 kubernetes 集群中已经安装了 Helm 和 Tiller，那么接下来我们需要熟悉一下 Helm 的基本应用，主要包括利用 Helm 创建、打包、分发、安装、升级及回滚 kubernetes 应用。 创</description>
     </item>
     
     <item>

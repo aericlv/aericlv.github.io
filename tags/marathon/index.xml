@@ -29,5 +29,14 @@
       <description>私有化 PaaS 平台主要由 Zookeeper、Mesos、Marathon 和 Docker 几个组件构成，各组件用途及扮演的角色信息如下所示： Zookeeper: Zookeeper 是一个分布式的，</description>
     </item>
     
+    <item>
+      <title>容器化部署 Mesos 集群</title>
+      <link>https://aeric.io/post/mesos-container-cluster-installation/</link>
+      <pubDate>Thu, 06 Dec 2018 16:34:08 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/mesos-container-cluster-installation/</guid>
+      <description>整个 mesos 集群主要由 Zookeeper、Mesos、Marathon 和 Docker 几个组件构成，各组件用途及扮演的角色信息如下所示： Zookeeper: Zookeeper 是一个分布式的，开</description>
+    </item>
+    
   </channel>
 </rss>

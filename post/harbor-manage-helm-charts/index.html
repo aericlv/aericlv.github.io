@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Helm 是 Kubernetes 生态系统中的一个软件包管理工具，Helm是由 Deis 发起的一个开源工具，有助于简化部署和管理 Kubernetes 应用。 它有点类似于 Ubuntu 中的 APT 或 CentOS 中的 YUM">
+    <meta name="description" content="在 v1.6 版本的 harbor 中新增加了 helm charts 的管理功能,这样就可以利用 harbor 同时管理镜像和 helm charts 了，在部署 kubernetes 相关应用时就比较方便">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>K8S 包管理工具 Helm - 介绍-吕啸腾的博客</title>
+    <title>用 Harbor 管理 Helm Charts-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-helm-introduction/">
+    <link rel="canonical" href="/post/harbor-manage-helm-charts/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1fyaxax6i27j21ja0lon64.jpg')
+        background-image: url('https://wx4.sinaimg.cn/large/b258d7f7ly1fz7289lodjj21ja0loq9w.jpg')
     }
 </style>
 <header class="intro-header">
@@ -142,6 +142,10 @@
             <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
                 <div class="post-heading">
                     <div class="tags">
+                        
+                        <a class="tag" href="/tags/harbor" title="Harbor">
+                            Harbor
+                        </a>
                         
                         <a class="tag" href="/tags/helm" title="Helm">
                             Helm
@@ -152,7 +156,7 @@
                         </a>
                         
                     </div>
-                    <h1>K8S 包管理工具 Helm - 介绍</h1>
+                    <h1>用 Harbor 管理 Helm Charts</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -160,7 +164,7 @@
 			         Aeric
 			 
 			on 
-			Tuesday, January 15, 2019
+			Friday, January 18, 2019
                         
                     </span>
                 </div>
@@ -190,88 +194,162 @@
 <ul>
 <li>
 <ul>
-<li><a href="#helm-基本概念">Helm 基本概念</a></li>
-<li><a href="#helm-基本组件">Helm 基本组件</a></li>
-<li><a href="#helm-的工作原理">Helm 的工作原理</a></li>
+<li><a href="#启用-harbor-的-chart-repository-服务">启用 harbor 的 chart repository 服务</a></li>
+<li><a href="#图形界面操作">图形界面操作</a></li>
+<li><a href="#用-helm-cli-管理-helm-charts">用 Helm CLI 管理 Helm Charts</a>
+<ul>
+<li><a href="#添加-harbor-helm-仓库">添加 harbor helm 仓库</a></li>
+<li><a href="#上传-helm-charts">上传 Helm Charts</a></li>
+<li><a href="#安装-helm-charts">安装 Helm Charts</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p><a href="https://helm.sh">Helm</a> 是 Kubernetes 生态系统中的一个软件包管理工具，Helm 是由 <a href="https://deis.com/">Deis</a> 发起的一个开源工具，有助于简化部署和管理 Kubernetes 应用。 它有点类似于 Ubuntu 中的 APT 或 CentOS 中的 YUM</p>
+<p>在 v1.6 版本的 harbor 中新增加了 helm charts 的管理功能,这样就可以利用 harbor 同时管理镜像和 helm charts 了，在部署 kubernetes 相关应用时就比较方便，本次尝试用 harbor 来管理 helm charts。</p>
 
-<p>Helm 官方网站：<a href="https://helm.sh">https://helm.sh</a></p>
+<p>之前我是将公司内的 harbor 仓库做了一次升级，将 harbor 升级到了 <code>v1.7.1</code>版本，具体升级过程可以参考之前博文内容：<a href="https://aeric.io/post/harbor-upgrade-guide">记一次harbor的升级之旅</a>。当然你也可以重新安装新版本的 harbor。因为本人公司 harbor 仓库用的是 https 协议来访问的，所以我们还需要相关证书，证书需要是受信的才行，这个需要根据具体情况来做取舍，这里不再赘述，具体怎么使用 harbor 来管理 helm charts 可以参考下面的内容。</p>
 
-<p>Helm GitHub 地址: <a href="https://github.com/helm/helm">https://github.com/helm/helm</a></p>
+<h2 id="启用-harbor-的-chart-repository-服务">启用 harbor 的 chart repository 服务</h2>
 
-<h2 id="helm-基本概念">Helm 基本概念</h2>
+<p>默认新版 harbor 不会启用 <code>chart repository service</code>，如果需要管理 <code>helm</code>，我们需要在安装时添加额外的参数，例如：</p>
 
-<p>Helm 可以理解为 Kubernetes 的包管理工具，可以方便地发现、共享和使用为 Kubernetes 构建的应用，它包含几个基本概念</p>
+<pre><code class="language-bash">## 默认安装
+$ cd /srv/harbor
+$ ./install.sh
+
+## 启动 chart repository service 服务
+$ cd /srv/harbor
+$ ./install.sh --with-chartmuseum
+</code></pre>
+
+<p>等待安装完成即可，安装完成后会有如下类似提示：</p>
+
+<pre><code>...
+✔ ----Harbor has been installed and started successfully.----
+...
+</code></pre>
+
+<p>之后，我们就可以用上述 harbor 来管理 helm charts 了。</p>
+
+<h2 id="图形界面操作">图形界面操作</h2>
+
+<p><strong>创建相关项目：</strong></p>
+
+<p>首先，我们需要在 harbor 上创建一个名为 <code>helm-repo</code>的项目，如下图所示：</p>
+
+<p><img src="https://ws2.sinaimg.cn/large/006tNc79ly1fze0qq4evoj31ju0pgn12.jpg" alt="创建 helm-repo 项目" /></p>
+
+<p><strong>上传 Helm Charts 包：</strong></p>
+
+<p>单击 “上传” 按钮以打开图表上载对话框。 从文件系统中选择上传 Helm Charts。 单击 UPLOAD 按钮将其上载到 <code>helm-repo</code>存储库。</p>
+
+<p><img src="https://wx1.sinaimg.cn/large/b258d7f7ly1fzcv3e6xs6j20vw0fuq3y.jpg" alt="上传 Helm Charts" /></p>
+
+<blockquote>
+<p>If the chart is signed, you can choose the corresponding provenance file from your filesystem and Click the <code>UPLOAD</code>button to upload them together at once.</p>
+</blockquote>
+
+<p>Helm Charts 上传成功后，就可以显示在相关界面上，具体内容包括: chart 版本号、状态、作者、Egine、创建时间等信息，如下图所示：</p>
+
+<p><img src="https://wx3.sinaimg.cn/large/b258d7f7ly1fzcvbwmsjvj22i80mu78n.jpg" alt="charts_version" /></p>
+
+<p>当然，harbor 也支持根据每个 cahrt  的用途，为上传的 chart 包打上对应的标签，点击相关按钮即可，在打标签之前需要在 harbor 的系统设置里添加好对应标签即可，当为相应的 chart 添加好对应标签后 harbor 支持根据标签过滤 chart ,这个挺简单的，这里不再赘述。</p>
+
+<p>charts 成功上传后，我们可以查看其具体信息，主要包括 <code>Summary</code>、<code>Dependencies</code>、<code>Values</code>等相关信息。也可以通过图形界面来管理上传的 charts ,包括 删除、更新等等具体操作。</p>
+
+<h2 id="用-helm-cli-管理-helm-charts">用 Helm CLI 管理 Helm Charts</h2>
+
+<p>上述用 harbor 的图形界面操作 helm charts 固然简单快捷，这个在我们查看 helm 时确实简单高效，但是当我们想利用 CI 实现 helm charts 自动部署应用到 Kubernetes 集群的时候，该方法就显得比较鸡肋了，可以说图形界面根本无法实现，所以我们需要用 <code>Helm CLI</code>工具来实现。</p>
+
+<p>首先，需要安装 helm 客户端工具，具体安装 helm cli 可以参考：<a href="https://docs.helm.sh/using_helm/#installing-helm">Install Helm</a>，安装完成后可以通过如下命令验证安装是否完成：</p>
+
+<pre><code class="language-bash">helm version
+
+#Client: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+#Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
+</code></pre>
+
+<h3 id="添加-harbor-helm-仓库">添加 harbor helm 仓库</h3>
+
+<p>在使用之前，应该使用 <code>helm repo add</code> 命令将 <code>Harbor</code> 添加到存储库列表中。它支持两种不同的模式：</p>
+
+<pre><code>1.Add Harbor as a unified single index entry point
+2.Add Harbor project as separate index entry point
+</code></pre>
+
+<p>这两种模式的具体区别如下所述：</p>
+
+<p><strong>Add Harbor as a unified single index entry point</strong></p>
 
 <ul>
-<li><strong>Helm :</strong>  一个命令行下的客户端工具。主要用于 Kubernetes 应用程序 Chart 的创建、打包、发布以及创建和管理本地和远程的 Chart 仓库。</li>
+<li><p>该模式可以使 Helm 访问到不同项目中的所有图表，以及当前经过身份验证的用户可以访问的图表。</p></li>
 
-<li><p><strong>Tiller :</strong>  Helm 的服务端，部署在 Kubernetes 集群中。Tiller 用于接收 Helm 的请求，并根据 Chart 生成 Kubernetes 的部署文件（ Helm 称为 Release ），然后提交给 Kubernetes 创建应用。Tiller 还提供了 Release 的升级、删除、回滚等一系列功能。</p></li>
-
-<li><p><strong>Chart :</strong>  一个 Helm 包，其中包含了运行一个应用所需要的镜像、依赖和资源定义等，还可能包含 Kubernetes 集群中的服务定义，类似 Homebrew 中的 formula，APT 的 dpkg 或者 Yum 的 rpm 文件。</p></li>
-
-<li><p><strong>Release :</strong>   在 Kubernetes 集群上运行的 Chart 的一个实例。在同一个集群上，一个 Chart 可以安装很多次。每次安装都会创建一个新的 release。例如一个 MySQL Chart，如果想在服务器上运行两个数据库，就可以把这个 Chart 安装两次。每次安装都会生成自己的 Release，会有自己的 Release 名称。</p></li>
-
-<li><p><strong>Repository ：</strong> 用于发布和存储 Chart 的仓库。</p></li>
+<li><pre><code class="language-bash">helm repo add --ca-file ca.crt --cert-file server.crt --key-file server.key --username=admin --password=Passw0rd myrepo https://xx.xx.xx.xx/chartrepo
+</code></pre></li>
 </ul>
 
-<h2 id="helm-基本组件">Helm 基本组件</h2>
-
-<p>Helm 采用客户端/服务器架构，有如下基本组件组成：</p>
+<p><strong>Add Harbor project as separate index entry point</strong></p>
 
 <ul>
-<li><strong>Helm CLI</strong> 是 Helm 客户端，可以在本地执行。</li>
-<li><strong>Tiller</strong> 是服务器端组件，在 Kubernetes 群集上运行，并管理 Kubernetes 应用程序的生命周期。</li>
-<li><strong>Repository</strong> 是 Chart 仓库，Helm客户端通过HTTP协议来访问仓库中Chart的索引文件和压缩包。</li>
+<li><p>该模式 helm 只能在指定项目中提取图表。</p></li>
+
+<li><pre><code class="language-bash">helm repo add --ca-file ca.crt --cert-file server.crt --key-file server.key --username=admin --password=Passw0rd myrepo https://xx.xx.xx.xx/chartrepo/myproject
+</code></pre></li>
 </ul>
 
-<p>Helm 各个基本组件之间的关系如下图所示：</p>
+<blockquote>
+<p>需要注意的是，如果用 <code>https</code>协议，这两种模式均需提供受信的证书和密钥，ca 证书可以不需要，省略</p>
+</blockquote>
 
-<p><img src="https://wx2.sinaimg.cn/large/b258d7f7ly1fz7f6u5lq4j20qe0gstb6.jpg" alt="Helm 各个基本组件之间的关系" /></p>
+<p>本次，我用的是第二种模式，添加完成后，如下所示：</p>
 
-<h2 id="helm-的工作原理">Helm 的工作原理</h2>
+<pre><code class="language-bash">[root@k8s-m1 ~]# helm repo list
+NAME     	URL
+stable   	https://kubernetes-charts.storage.googleapis.com
+local    	http://127.0.0.1:8879/charts
+myrepo	    https://harbor.xxx.cn/chartrepo/helm-repo
+</code></pre>
 
-<p>上面列出了 Helm 的基本组件及其用途，而 Helm 的工作过程和这些组件的功能用途是分不开的， Helm 依赖这些组件来完成整个工作流程，下面列出几个重要的工作过程，包括应用的安装、更新、回滚等流程。具体内容如下所述：</p>
+<h3 id="上传-helm-charts">上传 Helm Charts</h3>
 
-<p><strong>应用安装（chart install）</strong></p>
+<p>因为我们需要用 <code>helm push</code>命令上传，该命令是通过 <code>helm plugin</code>实现的，但是默认 helm 没有安装此插件，需要安装：</p>
 
-<ul>
-<li><p>Helm 从指定的目录或者 TAR 文件中解析出 Chart 结构信息。</p></li>
+<pre><code class="language-bash">helm plugin install https://github.com/chartmuseum/helm-push
+</code></pre>
 
-<li><p>Helm 将指定的 Chart 结构和 Values 信息通过 gRPC 传递给 Tiller。</p></li>
+<p>当我们打包好 <code>Helm Charts</code>后就可以通过命令上传至我们创建的仓库:</p>
 
-<li><p>Tiller 根据 Chart 和 Values 生成一个 Release。</p></li>
+<pre><code class="language-bash">helm push --ca-file=ca.crt --key-file=server.key --cert-file=server.crt --username=admin --password=passw0rd chart_repo/hello-helm-0.1.0.tgz myrepo
+</code></pre>
 
-<li><p>Tiller 将 Release 发送给 Kubernetes 用于生成 Release。</p></li>
-</ul>
+<blockquote>
+<p><code>push</code> command does not support pushing a prov file of a signed chart yet.</p>
+</blockquote>
 
-<p><strong>应用更新（chart update）</strong></p>
+<h3 id="安装-helm-charts">安装 Helm Charts</h3>
 
-<ul>
-<li>Helm 从指定的目录或者 TAR 文件中解析出 Chart 结构信息。</li>
-<li>Helm 将需要更新的 Release 的名称、Chart 结构和 Values 信息传递给 Tiller。</li>
-<li>Tiller 生成 Release 并更新指定名称的 Release 的 History。</li>
-<li>Tiller 将 Release 发送给 Kubernetes 用于更新 Release。</li>
-</ul>
+<p>在安装之前，请确保使用命令 helm init 正确初始化helm，并且图表索引与命令 <code>helm repo update</code>同步。</p>
 
-<p><strong>应用回滚（chart rollback）</strong></p>
+<pre><code class="language-bash">helm repo update
+</code></pre>
 
-<ul>
-<li>Helm 将要回滚的 Release 的名称传递给 Tiller。</li>
-<li>Tiller 根据 Release 的名称查找 History。</li>
-<li>Tiller 从 History 中获取上一个 Release。</li>
-<li>Tiller 将上一个 Release 发送给 Kubernetes 用于替换当前 Release。</li>
-</ul>
+<p>搜索需要安装的 helm chart</p>
 
-<p><strong>Chart 处理依赖说明</strong>：</p>
+<pre><code class="language-bash">helm search hello
+</code></pre>
 
-<p>Tiller 在处理 Chart 时，直接将 Chart 以及其依赖的所有 Charts 合并为一个 Release，同时传递给 Kubernetes。因此 Tiller 并不负责管理依赖之间的启动顺序。Chart 中的应用需要能够自行处理依赖关系。</p>
+<p>安装 helm charts</p>
+
+<pre><code class="language-bash">helm install --ca-file=ca.crt --key-file=server.key --cert-file=server.crt --username=admin --password=Passw0rd --version 0.1.10 repo248/chart_repo/hello-helm
+</code></pre>
+
+<p>至此， 用 harbor 管理 helm charts 就完成了。helm 连接的 kubernetes 集群默认是和 kubectl 连接的 kubernetes 集群一致的，之后我们可以到 kubernetes 集群中查看我们新部署的 helm 相关应用</p>
+
+<pre><code class="language-bash">helm list
+</code></pre>
 
 
                 
@@ -320,15 +398,10 @@
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/mkcert-valid-https-certificates-for-localhost/" data-toggle="tooltip" data-placement="top" title="mkcert:本地有效的https证书">&larr;
+                        <a href="/post/k8s-helm-application/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 应用">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/k8s-helm-installation/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 安装">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 

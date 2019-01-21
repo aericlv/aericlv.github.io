@@ -6,10 +6,19 @@
     <description>Recent content in Harbor on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 10 Jan 2019 14:37:01 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 18 Jan 2019 10:42:37 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/tags/harbor/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>用 Harbor 管理 Helm Charts</title>
+      <link>https://aeric.io/post/harbor-manage-helm-charts/</link>
+      <pubDate>Fri, 18 Jan 2019 10:42:37 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/harbor-manage-helm-charts/</guid>
+      <description>在 v1.6 版本的 harbor 中新增加了 helm charts 的管理功能,这样就可以利用 harbor 同时管理镜像和 helm charts 了，在部署 kubernetes 相关应用时就比较方便，本次尝试用 harbor 来管理 helm charts。</description>
+    </item>
     
     <item>
       <title>记一次harbor的升级之旅</title>
