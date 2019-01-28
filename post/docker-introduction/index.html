@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书">
+    <meta name="description" content="Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，Docker 使用谷歌公司自己开发的 GO 语言实现。">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes 集群创建 TLS 证书及密钥-吕啸腾的博客</title>
+    <title>容器 Docker 入门介绍-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-create-tls-and-keys/">
+    <link rel="canonical" href="/post/docker-introduction/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1fxtcy6jsv1j21ja0lo4f0.jpg')
+        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1fz0o7npb4uj21ja0lo443.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,16 +143,12 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/kubernetes" title="Kubernetes">
-                            Kubernetes
-                        </a>
-                        
                         <a class="tag" href="/tags/docker" title="Docker">
                             Docker
                         </a>
                         
                     </div>
-                    <h1>Kubernetes 集群创建 TLS 证书及密钥</h1>
+                    <h1>容器 Docker 入门介绍</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -160,7 +156,7 @@
 			         Aeric
 			 
 			on 
-			Friday, November 30, 2018
+			Thursday, July 26, 2018
                         
                     </span>
                 </div>
@@ -186,309 +182,32 @@
                 <header>
                     <h2>TOC</h2>
                 </header>
-                <nav id="TableOfContents">
-<ul>
-<li>
-<ul>
-<li><a href="#创建tls证书及密钥">创建TLS证书及密钥</a>
-<ul>
-<li><a href="#安装证书制作工具-cfssl">安装证书制作工具-CFSSL</a></li>
-<li><a href="#创建ca证书">创建CA证书</a></li>
-<li><a href="#创建-kubernetes-证书">创建 kubernetes 证书</a></li>
-<li><a href="#创建-admin-证书">创建 admin 证书</a></li>
-<li><a href="#创建-kube-proxy-证书">创建 kube-proxy 证书</a></li>
-</ul></li>
-<li><a href="#校验证书">校验证书</a></li>
-<li><a href="#分发证书">分发证书</a></li>
-</ul></li>
-</ul>
-</nav>
                 
                 
+                <p>Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，主要项目代码在 <a href="https://github.com/moby/moby">GitHub</a> 上维护。</p>
 
-<p>集群环境如下：</p>
+<p>Docker 使用谷歌公司自己开发的 <a href="https://golang.org/">GO 语言</a> 实现的，基于 Linux 内核的 cgroup、 namespace 和 AUFS 类的 Union FS 等技术，对进程进行隔离封装，属于操作系统层面的虚拟化技术。由于隔离的进程独立于宿主和其它的隔离的进程，因此也称其为容器。</p>
 
-<pre><code class="language-bash">k8s-master: 192.168.8.66
-k8s-nodes:  192.168.8.67 192.168.8.68
-k8s-harbor: 192.168.8.69
-</code></pre>
+<p>Docker 容器格式最初实现是基于 <a href="https://linuxcontainers.org/lxc/introduction/">LXC</a> ，从 0.7 版本以后开始去除 LXC，转而使用自行开发的 <a href="https://github.com/docker/libcontainer">libcontainer</a>，从 1.11 开始，则进一步演进为使用 <a href="https://github.com/opencontainers/runc">runC</a> 和 <a href="https://github.com/containerd/containerd">containerd</a>。</p>
 
-<h2 id="创建tls证书及密钥">创建TLS证书及密钥</h2>
+<p>Docker 在容器的基础上，进行了进一步的封装，从文件系统、网络互联到进程隔离等等，极大的简化了容器的创建和维护。使得 Docker 技术比虚拟机技术更为轻便、快捷。</p>
 
-<p><code>kubernetes</code>系统的各组件需要使用 <code>TLS</code> 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 <code>cfssl</code> 来生成 Certificate Authority (CA) 和其它证书；</p>
-
-<p>集群TLS认证需要的证书及密钥如下：</p>
-
-<pre><code class="language-bash">admin-key.pem
-admin.pem
-ca-key.pem
-ca.pem
-kube-proxy-key.pem
-kube-proxy.pem
-kubernetes-key.pem
-kubernetes.pem
-</code></pre>
-
-<p>集群各组件对证书的依赖如下：</p>
-
-<pre><code class="language-bash"># etcd：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kube-apiserver：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kubelet：使用 ca.pem；
-# kube-proxy：使用 ca.pem、kube-proxy-key.pem、kube-proxy.pem；
-# kubectl：使用 ca.pem、admin-key.pem、admin.pem；
-# kube-controller-manager：使用 ca-key.pem、ca.pem
-</code></pre>
-
-<h3 id="安装证书制作工具-cfssl">安装证书制作工具-CFSSL</h3>
-
-<p>安装前需要在 <code>/etc/profile</code> 文件中配置 <code>GOPATH</code> 变量，内容如下：</p>
-
-<pre><code class="language-bash">...
-export GOPATH=/usr/local/go
-...
-source /etc/profile
-</code></pre>
-
-<p>安装CFSSL</p>
-
-<pre><code class="language-bash">$ go get -u github.com/cloudflare/cfssl/cmd/...
-$ echo $GOPATH
-/usr/local/go
-$ ls /usr/local/go/bin/
-cfssl  cfssl-bundle  cfssl-certinfo  cfssljson  cfssl-newkey  cfssl-scan  mkbundle  multirootca
-</code></pre>
-
-<h3 id="创建ca证书">创建CA证书</h3>
-
-<p><strong>创建CA配置文件</strong></p>
-
-<pre><code class="language-bash">mkdir /root/ssl
-cd /root/ssl
-cfssl print-defaults config &gt; config.json
-cfssl print-defaults csr &gt; csr.json
-# 根据config.json文件的格式创建如下的ca-config.json文件
-# 过期时间设置成了 87600h
-cat &gt; ca-config.json &lt;&lt;EOF
-{
-  &quot;signing&quot;: {
-    &quot;default&quot;: {
-      &quot;expiry&quot;: &quot;87600h&quot;
-    },
-    &quot;profiles&quot;: {
-      &quot;kubernetes&quot;: {
-        &quot;usages&quot;: [
-            &quot;signing&quot;,
-            &quot;key encipherment&quot;,
-            &quot;server auth&quot;,
-            &quot;client auth&quot;
-        ],
-        &quot;expiry&quot;: &quot;87600h&quot;
-      }
-    }
-   }
-}
-EOF
-</code></pre>
-
-<p>字段说明如下：</p>
+<p>Docker 作为操作系统层面的虚拟化技术，它和传统的虚拟化技术相比有以下几个特点：</p>
 
 <ul>
-<li><code>ca-config.json</code>：可以定义多个 profiles，分别指定不同的过期时间、使用场景等参数；后续在签名证书时使用某个 profile；</li>
-<li><code>signing</code>：表示该证书可用于签名其它证书；生成的 ca.pem 证书中 CA=TRUE；</li>
-<li><code>server auth</code>：表示client可以用该 CA 对server提供的证书进行验证；</li>
-<li><code>client auth</code>：表示server可以用该 CA 对client提供的证书进行验证；</li>
+<li><strong>更轻便、快捷的应用</strong>。 传统虚拟机技术是虚拟出一套硬件后，在其上运行一个完整操作系统，然后在该系统上再运行所需应用进程，而容器内的应用进程直接运行于宿主的内核，容器内没有自己的内核，而且也没有进行硬件虚拟。</li>
+<li><strong>更高效的利用系统资源</strong>。 由于容器不需要进行硬件虚拟以及运行完整操作系统等额外开销，Docker 对系统资源的利用率更高。</li>
+<li><strong>更快速的应用启动时间</strong>。 传统的虚拟机技术启动应用服务往往需要数分钟，而 Docker 容器应用，由于直接运行于宿主内核，无需启动完整的操作系统，因此可以做到秒级、甚至毫秒级的启动时间。</li>
+<li><strong>近乎一致的应用运行环境</strong>。 Docker 的镜像提供了除内核外完整的运行时环境，确保了应用运行环境一致性。</li>
+<li><strong>持续交付和部署</strong>。 使用 Docker 可以通过定制应用镜像来实现持续集成、持续交付、部署。开发人员可以通过 Dockerfile 来进行镜像构建，并结合 持续集成(Continuous Integration) 系统进行集成测试，而运维人员则可以直接在生产环境中快速部署该镜像，甚至结合 持续部署(Continuous Delivery/Deployment) 系统进行自动部署。</li>
+<li><strong>可以更快的迁移</strong>。 由于 Docker 确保了执行环境的一致性，使得应用的迁移更加容易。可以说 Docker 可以在任何平台上运行，因为镜像的一致性也保证了运行环境的一致性，所以迁移起来更加的快速高效。</li>
+
+<li><p><strong>更轻松的维护和扩展</strong>。 Docker 使用的分层存储以及镜像的技术，使得应用重复部分的复用更为容易，也使得应用的维护更新更加简单，基于基础镜像进一步扩展镜像也更加的容易。</p></li>
+
+<li><p>下面的图片比较了 Docker 和传统虚拟化方式的不同：
+<img src="https://wx2.sinaimg.cn/large/b258d7f7ly1fzlhdmhe64j20j8079q33.jpg" alt="传统虚拟化技术" title="传统虚拟化技术" />
+<img src="https://wx1.sinaimg.cn/large/b258d7f7ly1fzlhdltddwj20j505ft8t.jpg" alt="docker虚拟化技术" title="docker 容器虚拟化技术" /></p></li>
 </ul>
-
-<p><strong>创建 CA 证书签名请求</strong></p>
-
-<pre><code class="language-bash">cat &gt; ca-csr.json &lt;&lt; EOF
-    {
-      &quot;CN&quot;: &quot;kubernetes&quot;,
-      &quot;key&quot;: {
-        &quot;algo&quot;: &quot;rsa&quot;,
-        &quot;size&quot;: 2048
-      },
-      &quot;names&quot;: [
-        {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-        }
-      ]
-    }
-    EOF
-</code></pre>
-
-<p>字段说明如下：</p>
-
-<ul>
-<li>&ldquo;CN&rdquo;：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；</li>
-<li>&ldquo;O&rdquo;：Organization，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；</li>
-</ul>
-
-<p><strong>生成 CA 证书和密钥</strong></p>
-
-<pre><code class="language-bash">$ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-$ ls ca*
-ca-config.json  ca.csr  ca-csr.json  ca-key.pem  ca.pem
-</code></pre>
-
-<h3 id="创建-kubernetes-证书">创建 kubernetes 证书</h3>
-
-<p><strong>创建 kubernetes 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kubernetes-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;kubernetes&quot;,
-  &quot;hosts&quot;: [
-    &quot;127.0.0.1&quot;,
-    &quot;192.168.8.66&quot;,
-    &quot;192.168.8.67&quot;,
-    &quot;192.168.8.68&quot;,
-    &quot;192.168.8.69&quot;,
-    &quot;10.254.0.1&quot;,
-    &quot;kubernetes&quot;,
-    &quot;kubernetes.default&quot;,
-    &quot;kubernetes.default.svc&quot;,
-    &quot;kubernetes.default.svc.cluster&quot;,
-    &quot;kubernetes.default.svc.cluster.local&quot;
-  ],
-  &quot;key&quot;: {
-      &quot;algo&quot;: &quot;rsa&quot;,
-      &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-      {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-      }
-  ]
-}
-EOF
-</code></pre>
-
-<p>如果 hosts 字段不为空则需要指定授权使用该证书的 IP 或域名列表，由于该证书后续被 etcd 集群和 kubernetes master 集群使用，所以上面分别指定了 etcd 集群、kubernetes master 集群的主机 IP 和 kubernetes 服务的服务 IP（一般是 kube-apiserver 指定的 service-cluster-ip-range 网段的第一个IP，如 10.254.0.1。hosts 中的内容可以为空，即使按照上面的配置，向集群中增加新节点后也不需要重新生成证书。</p>
-
-<p><strong>生成 kubernetes 证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes
-# ls kubernetes*
-kubernetes.csr  kubernetes-csr.json  kubernetes-key.pem  kubernetes.pem
-</code></pre>
-
-<h3 id="创建-admin-证书">创建 admin 证书</h3>
-
-<p><strong>创建 admin 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; admin-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;admin&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;system:masters&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明：</p>
-
-<ul>
-<li>后续 kube-apiserver 使用 RBAC 对客户端(如 kubelet、kube-proxy、Pod)请求进行授权，kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 cluster-admin 将 Group system:masters 与 Role cluster-admin 绑定，该 Role 授予了调用kube-apiserver 的所有 API的权限；</li>
-<li>OU 指定该证书的 Group 为 system:masters，kubelet 使用该证书访问 kube-apiserver 时 ，由于证书被 CA 签名，所以认证通过，同时由于证书用户组为经过预授权的 system:masters，所以被授予访问所有 API 的权限；</li>
-</ul>
-
-<p><strong>生成 admin 证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
-# ls admin*
-admin.csr  admin-csr.json  admin-key.pem  admin.pem
-</code></pre>
-
-<h3 id="创建-kube-proxy-证书">创建 kube-proxy 证书</h3>
-
-<p><strong>创建 kube-proxy 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kube-proxy-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;system:kube-proxy&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;k8s&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明如下：</p>
-
-<ul>
-<li>CN 指定该证书的 User 为 system:kube-proxy；</li>
-<li>kube-apiserver 预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 kube-apiserver Proxy 相关 API 的权限；</li>
-</ul>
-
-<p><strong>生成 kube-proxy 客户端证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes  kube-proxy-csr.json | cfssljson -bare kube-proxy
-# ls kube-proxy*
-kube-proxy.csr  kube-proxy-csr.json  kube-proxy-key.pem  kube-proxy.pem
-</code></pre>
-
-<h2 id="校验证书">校验证书</h2>
-
-<p>以 kubernetes 证书为例</p>
-
-<p><strong>使用 openssl 命令校验</strong></p>
-
-<pre><code class="language-bash">openssl x509  -noout -text -in  kubernetes.pem
-</code></pre>
-
-<p>需要确认的信息如下：</p>
-
-<ul>
-<li>确认 Issuer 字段的内容和 ca-csr.json 一致；</li>
-<li>确认 Subject 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Subject Alternative Name 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Key Usage、Extended Key Usage 字段的内容和 ca-config.json 中 kubernetes profile 一致；</li>
-</ul>
-
-<p><strong>使用 fssl-certinfo 命令校验</strong></p>
-
-<pre><code class="language-bash">cfssl-certinfo -cert kubernetes.pem
-</code></pre>
-
-<h2 id="分发证书">分发证书</h2>
-
-<p>将生成的证书和秘钥文件（后缀名为.pem）拷贝到所有机器的 <code>/etc/kubernetes/ssl</code> 目录下备用；</p>
-
-<pre><code class="language-bash">mkdir -p /etc/kubernetes/ssl
-cp *.pem /etc/kubernetes/ssl
-</code></pre>
 
 
                 
@@ -536,14 +255,9 @@ cp *.pem /etc/kubernetes/ssl
                 <hr>
                 <ul class="pager">
                     
-                    <li class="previous">
-                        <a href="/post/docker-other-config/" data-toggle="tooltip" data-placement="top" title="Docker 服务的一些常用配置">&larr;
-                            Previous Post</a>
-                    </li>
-                    
                     
                     <li class="next">
-                        <a href="/post/rabbitmq-erlang-installation/" data-toggle="tooltip" data-placement="top" title="RabbitMQ Erlang 环境配置">Next
+                        <a href="/post/docker-installation-guide/" data-toggle="tooltip" data-placement="top" title="CentOS 7 安装 Docker">Next
                             Post &rarr;</a>
                     </li>
                     

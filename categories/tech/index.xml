@@ -137,5 +137,41 @@
       <description>集群环境如下： k8s-master: 192.168.8.66 k8s-nodes: 192.168.8.67 192.168.8.68 k8s-harbor: 192.168.8.69 创建TLS证书及密钥 kubernetes系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成</description>
     </item>
     
+    <item>
+      <title>Docker 服务的一些常用配置</title>
+      <link>https://aeric.io/post/docker-other-config/</link>
+      <pubDate>Sun, 29 Jul 2018 21:36:09 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/docker-other-config/</guid>
+      <description>同步容器与宿主机时间 在 Docker 容器创建好之后，可能会发现容器时间跟宿主机时间不一致，这就需要同步它们的时间，让容器时间跟宿主机时间保持一致。 宿主机</description>
+    </item>
+    
+    <item>
+      <title>Docker 配置镜像加速器</title>
+      <link>https://aeric.io/post/docker-image-accelerator-installation/</link>
+      <pubDate>Sat, 28 Jul 2018 21:35:35 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/docker-image-accelerator-installation/</guid>
+      <description>Docker 默认是从 Docker Hub 上拉取所需镜像的，但是一般在国内从 Docker Hub 拉取镜像有时会遇到困难，此时可以配置镜像加速器。为此 Docker 官方和国内很多云服务商都提供了国内</description>
+    </item>
+    
+    <item>
+      <title>CentOS 7 安装 Docker</title>
+      <link>https://aeric.io/post/docker-installation-guide/</link>
+      <pubDate>Fri, 27 Jul 2018 21:35:11 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/docker-installation-guide/</guid>
+      <description>本次安装的 docker 客户端是 CE 版本，具体安装教程可以参考官方文档： Docker Installation 卸载旧版本 Docker 如果要重新安装 Docker ，首先需要在安装之前卸载之前安装过的 Docker 版本，具体卸</description>
+    </item>
+    
+    <item>
+      <title>容器 Docker 入门介绍</title>
+      <link>https://aeric.io/post/docker-introduction/</link>
+      <pubDate>Thu, 26 Jul 2018 21:34:07 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/docker-introduction/</guid>
+      <description>Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，主要项目代码在 GitHub 上维护。 Docker 使用谷歌公司自己开发的 GO 语言 实现的，基于 Linux 内</description>
+    </item>
+    
   </channel>
 </rss>
