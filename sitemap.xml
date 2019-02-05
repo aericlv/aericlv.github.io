@@ -115,12 +115,6 @@
   </url>
   
   <url>
-    <loc>https://aeric.io/</loc>
-    <lastmod>2019-01-27T21:09:35+08:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>https://aeric.io/categories/</loc>
     <priority>0</priority>
   </url>
@@ -246,6 +240,12 @@
   <url>
     <loc>https://aeric.io/tags/mkcert/</loc>
     <lastmod>2019-01-14T20:30:33+08:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://aeric.io/</loc>
+    <lastmod>2019-01-27T21:09:35+08:00</lastmod>
     <priority>0</priority>
   </url>
   
