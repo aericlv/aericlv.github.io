@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书">
+    <meta name="description" content="kubelet 和 kube-proxy 等 Node 机器上的进程与 Master 机器的 kube-apiserver 进程通信时需要认证和授权，所以这里需要自己创建 kubeconfig 文件，具体操作可以参考如下">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes 集群创建 TLS 证书及密钥-吕啸腾的博客</title>
+    <title>Kubernetes集群创建配置文件-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-create-tls-and-keys/">
+    <link rel="canonical" href="/post/k8s-create-kubeconfig/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1fxtcy6jsv1j21ja0lo4f0.jpg')
+        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1g06wfeb8exj21ja0lotic.jpg')
     }
 </style>
 <header class="intro-header">
@@ -152,7 +152,7 @@
                         </a>
                         
                     </div>
-                    <h1>Kubernetes 集群创建 TLS 证书及密钥</h1>
+                    <h1>Kubernetes集群创建配置文件</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -190,304 +190,131 @@
 <ul>
 <li>
 <ul>
-<li><a href="#创建tls证书及密钥">创建TLS证书及密钥</a>
+<li>
 <ul>
-<li><a href="#安装证书制作工具-cfssl">安装证书制作工具-CFSSL</a></li>
-<li><a href="#创建ca证书">创建CA证书</a></li>
-<li><a href="#创建-kubernetes-证书">创建 kubernetes 证书</a></li>
-<li><a href="#创建-admin-证书">创建 admin 证书</a></li>
-<li><a href="#创建-kube-proxy-证书">创建 kube-proxy 证书</a></li>
+<li><a href="#创建-tls-bootstrapping-token">创建 TLS Bootstrapping Token</a></li>
+<li><a href="#创建-kubelet-bootstrapping-kubeconfig-文件">创建 kubelet bootstrapping kubeconfig 文件</a></li>
+<li><a href="#创建-kube-proxy-kubeconfig-文件">创建 kube-proxy kubeconfig 文件</a></li>
+<li><a href="#分发-kubeconfig-文件">分发 kubeconfig 文件</a></li>
 </ul></li>
-<li><a href="#校验证书">校验证书</a></li>
-<li><a href="#分发证书">分发证书</a></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p>集群环境如下：</p>
+<p>需要说明的是 <code>kubelet</code>、<code>kube-proxy</code> 等 Node 机器上的进程与 Master 机器的 <code>kube-apiserver</code> 进程通信时需要认证和授权；</p>
 
-<pre><code class="language-bash">k8s-master: 192.168.8.66
-k8s-nodes:  192.168.8.67 192.168.8.68
-k8s-harbor: 192.168.8.69
-</code></pre>
+<p><code>kubernetes v1.4</code> 版本开始支持由 <code>kube-apiserver</code> 为客户端生成 TLS 证书的 TLS <code>Bootstrapping</code>功能，这样就不需要为每个客户端生成证书了，但目前只支持为 kubectl 生成证书。</p>
 
-<h2 id="创建tls证书及密钥">创建TLS证书及密钥</h2>
+<blockquote>
+<p>以下操作只需要在 <code>master</code> 上执行即可，生成的 <code>*.kubeconfig</code> 文件可以直接拷贝到 node 节点的 <code>/etc/kubernetes</code> 目录下。</p>
+</blockquote>
 
-<p><code>kubernetes</code>系统的各组件需要使用 <code>TLS</code> 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 <code>cfssl</code> 来生成 Certificate Authority (CA) 和其它证书；</p>
+<h3 id="创建-tls-bootstrapping-token">创建 TLS Bootstrapping Token</h3>
 
-<p>集群TLS认证需要的证书及密钥如下：</p>
+<p>token 可以是任意的包涵 128 bit 的字符串，可以使用安全的随机数发生器生成。</p>
 
-<pre><code class="language-bash">admin-key.pem
-admin.pem
-ca-key.pem
-ca.pem
-kube-proxy-key.pem
-kube-proxy.pem
-kubernetes-key.pem
-kubernetes.pem
-</code></pre>
+<p>具体配置参考如下：</p>
 
-<p>集群各组件对证书的依赖如下：</p>
+<pre><code class="language-bash">cd /etc/kubernetes
+export BOOTSTRAP_TOKEN=$(head -c 16 /dev/urandom | od -An -t x | tr -d ' ')
 
-<pre><code class="language-bash"># etcd：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kube-apiserver：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kubelet：使用 ca.pem；
-# kube-proxy：使用 ca.pem、kube-proxy-key.pem、kube-proxy.pem；
-# kubectl：使用 ca.pem、admin-key.pem、admin.pem；
-# kube-controller-manager：使用 ca-key.pem、ca.pem
-</code></pre>
-
-<h3 id="安装证书制作工具-cfssl">安装证书制作工具-CFSSL</h3>
-
-<p>安装前需要在 <code>/etc/profile</code> 文件中配置 <code>GOPATH</code> 变量，内容如下：</p>
-
-<pre><code class="language-bash">...
-export GOPATH=/usr/local/go
-...
-source /etc/profile
-</code></pre>
-
-<p>安装CFSSL</p>
-
-<pre><code class="language-bash">$ go get -u github.com/cloudflare/cfssl/cmd/...
-$ echo $GOPATH
-/usr/local/go
-$ ls /usr/local/go/bin/
-cfssl  cfssl-bundle  cfssl-certinfo  cfssljson  cfssl-newkey  cfssl-scan  mkbundle  multirootca
-</code></pre>
-
-<h3 id="创建ca证书">创建CA证书</h3>
-
-<p><strong>创建CA配置文件</strong></p>
-
-<pre><code class="language-bash">mkdir /root/ssl
-cd /root/ssl
-cfssl print-defaults config &gt; config.json
-cfssl print-defaults csr &gt; csr.json
-# 根据config.json文件的格式创建如下的ca-config.json文件
-# 过期时间设置成了 87600h
-cat &gt; ca-config.json &lt;&lt;EOF
-{
-  &quot;signing&quot;: {
-    &quot;default&quot;: {
-      &quot;expiry&quot;: &quot;87600h&quot;
-    },
-    &quot;profiles&quot;: {
-      &quot;kubernetes&quot;: {
-        &quot;usages&quot;: [
-            &quot;signing&quot;,
-            &quot;key encipherment&quot;,
-            &quot;server auth&quot;,
-            &quot;client auth&quot;
-        ],
-        &quot;expiry&quot;: &quot;87600h&quot;
-      }
-    }
-   }
-}
+cat &gt; token.csv &lt;&lt;EOF
+${BOOTSTRAP_TOKEN},kubelet-bootstrap,10001,&quot;system:kubelet-bootstrap&quot;
 EOF
 </code></pre>
 
-<p>字段说明如下：</p>
+<blockquote>
+<p>在进行后续操作前请检查 token.csv 文件，确认其中的 ${BOOTSTRAP_TOKEN} 环境变量已经被真实的值替换。</p>
+</blockquote>
+
+<p><code>BOOTSTRAP_TOKEN</code> 将被写入到 <code>kube-apiserver</code> 使用的 <code>token.csv</code> 文件和 <code>kubelet</code> 使用的 <code>bootstrap.kubeconfig</code> 文件，如果后续重新生成了 <code>BOOTSTRAP_TOKEN</code>，则需要进行如下操作：</p>
 
 <ul>
-<li><code>ca-config.json</code>：可以定义多个 profiles，分别指定不同的过期时间、使用场景等参数；后续在签名证书时使用某个 profile；</li>
-<li><code>signing</code>：表示该证书可用于签名其它证书；生成的 ca.pem 证书中 CA=TRUE；</li>
-<li><code>server auth</code>：表示client可以用该 CA 对server提供的证书进行验证；</li>
-<li><code>client auth</code>：表示server可以用该 CA 对client提供的证书进行验证；</li>
+<li>更新 <code>token.csv</code> 文件，分发到所有机器 (master 和 node）的 <code>/etc/kubernetes/</code> 目录下，分发到node节点上非必需；</li>
+<li>重新生成 <code>bootstrap.kubeconfig</code> 文件，分发到所有 node 机器的 <code>/etc/kubernetes/</code> 目录下；</li>
+<li>重启 <code>kube-apiserver</code> 和 <code>kubelet</code> 进程；</li>
+<li>重新 approve kubelet 的 csr 请求。</li>
 </ul>
 
-<p><strong>创建 CA 证书签名请求</strong></p>
+<h3 id="创建-kubelet-bootstrapping-kubeconfig-文件">创建 kubelet bootstrapping kubeconfig 文件</h3>
 
-<pre><code class="language-bash">cat &gt; ca-csr.json &lt;&lt; EOF
-    {
-      &quot;CN&quot;: &quot;kubernetes&quot;,
-      &quot;key&quot;: {
-        &quot;algo&quot;: &quot;rsa&quot;,
-        &quot;size&quot;: 2048
-      },
-      &quot;names&quot;: [
-        {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-        }
-      ]
-    }
-    EOF
+<p>具体配置参考如下：</p>
+
+<pre><code class="language-bash">cd /etc/kubernetes
+export KUBE_APISERVER=&quot;https://192.168.8.66:6443&quot;
+ 
+# 设置集群参数
+kubectl config set-cluster kubernetes \
+  --certificate-authority=/etc/kubernetes/ssl/ca.pem \
+  --embed-certs=true \
+  --server=${KUBE_APISERVER} \
+  --kubeconfig=bootstrap.kubeconfig
+  
+# 设置客户端认证参数
+kubectl config set-credentials kubelet-bootstrap \
+  --token=${BOOTSTRAP_TOKEN} \
+  --kubeconfig=bootstrap.kubeconfig
+
+# 设置上下文参数
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=kubelet-bootstrap \
+  --kubeconfig=bootstrap.kubeconfig
+  
+# 设置默认上下文
+kubectl config use-context default --kubeconfig=bootstrap.kubeconfig
 </code></pre>
 
-<p>字段说明如下：</p>
+<p>参数说明：</p>
 
 <ul>
-<li>&ldquo;CN&rdquo;：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；</li>
-<li>&ldquo;O&rdquo;：Organization，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；</li>
+<li><code>--embed-certs</code> 为 <code>true</code> 时表示将 <code>certificate-authority</code> 证书写入到生成的 <code>ootstrap.kubeconfig</code> 文件中；</li>
+<li>设置客户端认证参数时没有指定秘钥和证书，后续由 <code>kube-apiserver</code> 自动生成；</li>
 </ul>
 
-<p><strong>生成 CA 证书和密钥</strong></p>
+<h3 id="创建-kube-proxy-kubeconfig-文件">创建 kube-proxy kubeconfig 文件</h3>
 
-<pre><code class="language-bash">$ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-$ ls ca*
-ca-config.json  ca.csr  ca-csr.json  ca-key.pem  ca.pem
+<p>创建 kube-proxy 的 kubeconfig 文件参考如下：</p>
+
+<pre><code class="language-bash">cd /etc/kubernetes
+export KUBE_APISERVER=&quot;https://192.168.8.66:6443&quot;
+# 设置集群参数
+kubectl config set-cluster kubernetes \
+  --certificate-authority=/etc/kubernetes/ssl/ca.pem \
+  --embed-certs=true \
+  --server=${KUBE_APISERVER} \
+  --kubeconfig=kube-proxy.kubeconfig
+# 设置客户端认证参数
+kubectl config set-credentials kube-proxy \
+  --client-certificate=/etc/kubernetes/ssl/kube-proxy.pem \
+  --client-key=/etc/kubernetes/ssl/kube-proxy-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-proxy.kubeconfig
+# 设置上下文参数
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=kube-proxy \
+  --kubeconfig=kube-proxy.kubeconfig
+# 设置默认上下文
+kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 </code></pre>
 
-<h3 id="创建-kubernetes-证书">创建 kubernetes 证书</h3>
-
-<p><strong>创建 kubernetes 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kubernetes-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;kubernetes&quot;,
-  &quot;hosts&quot;: [
-    &quot;127.0.0.1&quot;,
-    &quot;192.168.8.66&quot;,
-    &quot;192.168.8.67&quot;,
-    &quot;192.168.8.68&quot;,
-    &quot;192.168.8.69&quot;,
-    &quot;10.254.0.1&quot;,
-    &quot;kubernetes&quot;,
-    &quot;kubernetes.default&quot;,
-    &quot;kubernetes.default.svc&quot;,
-    &quot;kubernetes.default.svc.cluster&quot;,
-    &quot;kubernetes.default.svc.cluster.local&quot;
-  ],
-  &quot;key&quot;: {
-      &quot;algo&quot;: &quot;rsa&quot;,
-      &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-      {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-      }
-  ]
-}
-EOF
-</code></pre>
-
-<p>如果 hosts 字段不为空则需要指定授权使用该证书的 IP 或域名列表，由于该证书后续被 etcd 集群和 kubernetes master 集群使用，所以上面分别指定了 etcd 集群、kubernetes master 集群的主机 IP 和 kubernetes 服务的服务 IP（一般是 kube-apiserver 指定的 service-cluster-ip-range 网段的第一个IP，如 10.254.0.1。hosts 中的内容可以为空，即使按照上面的配置，向集群中增加新节点后也不需要重新生成证书。</p>
-
-<p><strong>生成 kubernetes 证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes
-# ls kubernetes*
-kubernetes.csr  kubernetes-csr.json  kubernetes-key.pem  kubernetes.pem
-</code></pre>
-
-<h3 id="创建-admin-证书">创建 admin 证书</h3>
-
-<p><strong>创建 admin 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; admin-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;admin&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;system:masters&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明：</p>
+<p>参数说明：</p>
 
 <ul>
-<li>后续 kube-apiserver 使用 RBAC 对客户端(如 kubelet、kube-proxy、Pod)请求进行授权，kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 cluster-admin 将 Group system:masters 与 Role cluster-admin 绑定，该 Role 授予了调用kube-apiserver 的所有 API的权限；</li>
-<li>OU 指定该证书的 Group 为 system:masters，kubelet 使用该证书访问 kube-apiserver 时 ，由于证书被 CA 签名，所以认证通过，同时由于证书用户组为经过预授权的 system:masters，所以被授予访问所有 API 的权限；</li>
+<li>设置集群参数和客户端认证参数时 <code>--embed-certs</code> 都为 <code>true</code>，这会将 <code>certificate-authority、client-certificate</code> 和 <code>client-key</code> 指向的证书文件内容写入到生成的 <code>kube-proxy.kubeconfig</code> 文件中；</li>
+<li><code>kube-proxy.pem</code> 证书中 CN 为 system:kube-proxy，<code>kube-apiserver</code> 预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 <code>kube-apiserver</code> Proxy 相关 API 的权限；</li>
 </ul>
 
-<p><strong>生成 admin 证书和私钥</strong></p>
+<h3 id="分发-kubeconfig-文件">分发 kubeconfig 文件</h3>
 
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
-# ls admin*
-admin.csr  admin-csr.json  admin-key.pem  admin.pem
-</code></pre>
+<p>创建完成后，我们需要将生成的两个 kubeconfig 文件分发到所有 Node 上的 <code>/etc/kubernetes/</code> 目录中。</p>
 
-<h3 id="创建-kube-proxy-证书">创建 kube-proxy 证书</h3>
-
-<p><strong>创建 kube-proxy 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kube-proxy-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;system:kube-proxy&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;k8s&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明如下：</p>
-
-<ul>
-<li>CN 指定该证书的 User 为 system:kube-proxy；</li>
-<li>kube-apiserver 预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 kube-apiserver Proxy 相关 API 的权限；</li>
-</ul>
-
-<p><strong>生成 kube-proxy 客户端证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes  kube-proxy-csr.json | cfssljson -bare kube-proxy
-# ls kube-proxy*
-kube-proxy.csr  kube-proxy-csr.json  kube-proxy-key.pem  kube-proxy.pem
-</code></pre>
-
-<h2 id="校验证书">校验证书</h2>
-
-<p>以 kubernetes 证书为例</p>
-
-<p><strong>使用 openssl 命令校验</strong></p>
-
-<pre><code class="language-bash">openssl x509  -noout -text -in  kubernetes.pem
-</code></pre>
-
-<p>需要确认的信息如下：</p>
-
-<ul>
-<li>确认 Issuer 字段的内容和 ca-csr.json 一致；</li>
-<li>确认 Subject 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Subject Alternative Name 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Key Usage、Extended Key Usage 字段的内容和 ca-config.json 中 kubernetes profile 一致；</li>
-</ul>
-
-<p><strong>使用 fssl-certinfo 命令校验</strong></p>
-
-<pre><code class="language-bash">cfssl-certinfo -cert kubernetes.pem
-</code></pre>
-
-<h2 id="分发证书">分发证书</h2>
-
-<p>将生成的证书和秘钥文件（后缀名为.pem）拷贝到所有机器的 <code>/etc/kubernetes/ssl</code> 目录下备用；</p>
-
-<pre><code class="language-bash">mkdir -p /etc/kubernetes/ssl
-cp *.pem /etc/kubernetes/ssl
+<pre><code class="language-bash">cp bootstrap.kubeconfig kube-proxy.kubeconfig /etc/kubernetes/
+scp bootstrap.kubeconfig kube-proxy.kubeconfig node-ip:/etc/kubernetes/
+# /etc/kubernetes/目录需要在node节点上提前创建，在制作证书和密钥的时候已经创建了所以不再赘述
 </code></pre>
 
 
@@ -537,13 +364,13 @@ cp *.pem /etc/kubernetes/ssl
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/docker-other-config/" data-toggle="tooltip" data-placement="top" title="Docker 服务的一些常用配置">&larr;
+                        <a href="/post/k8s-create-tls-and-keys/" data-toggle="tooltip" data-placement="top" title="Kubernetes 集群创建 TLS 证书及密钥">&larr;
                             Previous Post</a>
                     </li>
                     
                     
                     <li class="next">
-                        <a href="/post/k8s-create-kubeconfig/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群创建配置文件">Next
+                        <a href="/post/k8s-kubectl-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群安装kubectl工具">Next
                             Post &rarr;</a>
                     </li>
                     

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
-<head><head>
+<head>
+	<meta name="generator" content="Hugo 0.53" /><head>
     <meta name="google-site-verification" content="9vIieCe-Qpd78QOmBl63rGtIVbhY6sYyuxX3j8XWBA4" />
     <meta name="baidu-site-verification" content="LRrmH41lz7" />
     <meta charset="utf-8">
@@ -13,9 +14,9 @@
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes-吕啸腾的博客</title>
+    <title>Aeric Blog-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/tags/kubernetes/">
+    <link rel="canonical" href="/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -161,50 +162,14 @@
             
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-installation-with-binary/">
+    <a href="https://aeric.io/post/k8s-kubectl-installation/">
         <h2 class="post-title">
-            二进制方式部署Kubernetes集群
+            Kubernetes集群安装kubectl工具
         </h2>
 	
         <div class="post-content-preview">
 	
-            Kubernetes集群的安装方式有很多种，这里我们为了更深入的了解Kubernetes集群中各组件的工作方式，本次部署集群采用纯手动二进制方式部署，也是对很早之前文档的一个总结
-        
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Saturday, December 1, 2018
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/k8s-dns-addons-installation/">
-        <h2 class="post-title">
-            Kubernetes集群部署DNS插件
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            kube-dns 官方的 yaml 文件其实在我们先前下载的 kubernetes server 软件包内，具体路径为：/srv/kubernetes/cluster/addons/dns 我是把 kuberntes 解压
-       
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Saturday, December 1, 2018
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/k8s-nodes-installation/">
-        <h2 class="post-title">
-            Kubernetes集群部署Node节点服务
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务
+            在kubernetes集群中kubectl是个非常重要的命令行工具，它的作用相当于docker的相关命令，可以通过自己定义的yaml文件启动相关pod及service相关资源
         
         </div>
     </a>
@@ -215,14 +180,14 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-flannel-and-docker-config/">
+    <a href="https://aeric.io/post/k8s-create-kubeconfig/">
         <h2 class="post-title">
-            Kubernetes集群配置Flannel服务
+            Kubernetes集群创建配置文件
         </h2>
 	
         <div class="post-content-preview">
 	
-            在kubernetes集群中所有的node节点都需要安装网络插件才能让所有的Pod加入到同一个局域网中，本文是安装flannel网络插件的参考文档，具体操作可以参考正文
+            kubelet 和 kube-proxy 等 Node 机器上的进程与 Master 机器的 kube-apiserver 进程通信时需要认证和授权，所以这里需要自己创建 kubeconfig 文件，具体操作可以参考如下
         
         </div>
     </a>
@@ -233,19 +198,55 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-master-installation/">
+    <a href="https://aeric.io/post/k8s-create-tls-and-keys/">
         <h2 class="post-title">
-            Kubernetes集群部署Master节点服务
+            Kubernetes 集群创建 TLS 证书及密钥
         </h2>
 	
         <div class="post-content-preview">
 	
-            在Kubernetes集群中，Master节点上主要由kube-apiserver、kube-scheduler以及kube-controller-manager等服务维护整个集群的正常运行，本文主要介绍配置Master节点上的相关服务
+            Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书
         
         </div>
     </a>
     <p class="post-meta">
     Posted by      Aeric Friday, November 30, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/docker-other-config/">
+        <h2 class="post-title">
+            Docker 服务的一些常用配置
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            在日常使用 docker 的过程中，一般 docker 默认的配置不能满足我们正常的业务需要，这个时候就需要我们对 docker 做一些其他的配置来实现我们的需求或者功能
+        
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Sunday, July 29, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/pass-tool-guide/">
+        <h2 class="post-title">
+            使用PASS密码管理器管理密码
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            PASS 是 Linux 上的一个简单的命令行密码管理器，它将密码存储在一个 gpg 加密后的文件里。这些加密后的文件很好地组织按目录结构存放，方便我们对密码进行管理。
+        
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Sunday, July 29, 2018
     </p>
 </div>
 <hr>
@@ -257,12 +258,12 @@
 <ul class="pager">
     
     <li class="previous">
-        <a href="/tags/kubernetes/">&larr; Newer Posts</a>
+        <a href="/page/4/">&larr; Newer Posts</a>
     </li>
     
     
     <li class="next">
-        <a href="/tags/kubernetes/page/3/">Older Posts &rarr;</a>
+        <a href="/page/6/">Older Posts &rarr;</a>
     </li>
     
 </ul>
@@ -366,7 +367,7 @@
            <ul class="list-inline"> 
                
                <li>
-                   <a href="https://aeric.io/tags/kubernetes/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
+                   <a href="https://aeric.io/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
                        <span class="fa-stack fa-lg">
                            <i class="fa fa-circle fa-stack-2x"></i>
                            <i class="fa fa-rss fa-stack-1x fa-inverse"></i>
@@ -483,7 +484,7 @@
                 <ul class="list-inline text-center">
                    
                    <li>
-                       <a href="https://aeric.io/tags/kubernetes/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
+                       <a href="https://aeric.io/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
                            <span class="fa-stack fa-lg">
                                <i class="fa fa-circle fa-stack-2x"></i>
                                <i class="fa fa-rss fa-stack-1x fa-inverse"></i>

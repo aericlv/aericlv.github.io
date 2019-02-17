@@ -57,6 +57,78 @@
     </item>
     
     <item>
+      <title>二进制方式部署Kubernetes集群</title>
+      <link>https://aeric.io/post/k8s-installation-with-binary/</link>
+      <pubDate>Sat, 01 Dec 2018 15:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-installation-with-binary/</guid>
+      <description>在之前的博客中也写到过如何纯手工搭建自己的 Kubernetes 集群，本文档主要是对之前文档的一个总结，具体过程可以参考如下安装流程： Kubernetes-创建</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群部署DNS插件</title>
+      <link>https://aeric.io/post/k8s-dns-addons-installation/</link>
+      <pubDate>Sat, 01 Dec 2018 14:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-dns-addons-installation/</guid>
+      <description>kube-dns 官方的 yaml 文件其实在我们先前下载的 kubernetes server 软件包内，具体路径为：/srv/kubernetes/cluster/addons/dns 我是把 kuberntes 解压</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群部署Node节点服务</title>
+      <link>https://aeric.io/post/k8s-nodes-installation/</link>
+      <pubDate>Fri, 30 Nov 2018 18:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-nodes-installation/</guid>
+      <description>kubernetes node 节点包含如下组件： Flanneld Docker:docker直接用yum安装即可 kubelet kube-proxy 注意：每台 node 上都需要安装 flannel，master 节点上可以不必</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群配置Flannel服务</title>
+      <link>https://aeric.io/post/k8s-flannel-and-docker-config/</link>
+      <pubDate>Fri, 30 Nov 2018 16:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-flannel-and-docker-config/</guid>
+      <description>检查 TLS 证书 [root@ceph-node1 ~]# ls /etc/kubernetes/ssl/ admin-key.pem admin.pem ca-key.pem ca.pem kube-proxy-key.pem kube-proxy.pem kubernetes-key.pem kubernetes.pem 配置 Flannel 服务 建议直接使用 yum 安装 flanneld，除非对版本有特殊需求，默认安装的是 v0.7.1 版本的 flannel。 安</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群部署Master节点服务</title>
+      <link>https://aeric.io/post/k8s-master-installation/</link>
+      <pubDate>Fri, 30 Nov 2018 15:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-master-installation/</guid>
+      <description>kubernetes master 节点包含的组件包括以下几个部分： 1、 kube-apiserver 2、 kube-scheduler 3、 kube-controller-manager 本次部署我们将三个组件安装在一台机器上，kube-scheduler、kube-con</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群创建高可用etcd集群</title>
+      <link>https://aeric.io/post/k8s-etcd-cluster-installation/</link>
+      <pubDate>Fri, 30 Nov 2018 14:35:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-etcd-cluster-installation/</guid>
+      <description>kuberntes 集群使用 etcd 存储所有数据,本部分我们介绍部署一个三节点的高可用 etcd 集群，这三个节点复用kubernetes master机器。 三个 etcd 节点如下所示</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群安装kubectl工具</title>
+      <link>https://aeric.io/post/k8s-kubectl-installation/</link>
+      <pubDate>Fri, 30 Nov 2018 14:25:24 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-kubectl-installation/</guid>
+      <description>其实 kubernetes 的 server 软件包基本涵盖了 kubernetes 几乎所有的工具，所以我们只需要下载 kubernetes 的 server 软件包即可。 kubernetes 源码下载地址： https://github.com/kubernetes/kubernetes/releases/ 本文档是基于 v1.9.6 版本部署 kubernetes 集群，其他版本基本</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes集群创建配置文件</title>
+      <link>https://aeric.io/post/k8s-create-kubeconfig/</link>
+      <pubDate>Fri, 30 Nov 2018 14:25:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/k8s-create-kubeconfig/</guid>
+      <description>需要说明的是 kubelet、kube-proxy 等 Node 机器上的进程与 Master 机器的 kube-apiserver 进程通信时需要认证和授权； kubernetes v1.4 版本开始支持由 kube-apiserver 为客户端生成 TLS 证书</description>
+    </item>
+    
+    <item>
       <title>Kubernetes 集群创建 TLS 证书及密钥</title>
       <link>https://aeric.io/post/k8s-create-tls-and-keys/</link>
       <pubDate>Fri, 30 Nov 2018 14:05:14 +0800</pubDate>

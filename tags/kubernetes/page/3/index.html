@@ -161,50 +161,14 @@
             
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-installation-with-binary/">
+    <a href="https://aeric.io/post/k8s-etcd-cluster-installation/">
         <h2 class="post-title">
-            二进制方式部署Kubernetes集群
+            Kubernetes集群创建高可用etcd集群
         </h2>
 	
         <div class="post-content-preview">
 	
-            Kubernetes集群的安装方式有很多种，这里我们为了更深入的了解Kubernetes集群中各组件的工作方式，本次部署集群采用纯手动二进制方式部署，也是对很早之前文档的一个总结
-        
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Saturday, December 1, 2018
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/k8s-dns-addons-installation/">
-        <h2 class="post-title">
-            Kubernetes集群部署DNS插件
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            kube-dns 官方的 yaml 文件其实在我们先前下载的 kubernetes server 软件包内，具体路径为：/srv/kubernetes/cluster/addons/dns 我是把 kuberntes 解压
-       
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Saturday, December 1, 2018
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/k8s-nodes-installation/">
-        <h2 class="post-title">
-            Kubernetes集群部署Node节点服务
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务
+            kuberntes 集群使用 etcd 存储所有数据,本部分我们介绍部署一个三节点的高可用 etcd 集群，这三个节点复用 kubernetes master 主机
         
         </div>
     </a>
@@ -215,14 +179,14 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-flannel-and-docker-config/">
+    <a href="https://aeric.io/post/k8s-kubectl-installation/">
         <h2 class="post-title">
-            Kubernetes集群配置Flannel服务
+            Kubernetes集群安装kubectl工具
         </h2>
 	
         <div class="post-content-preview">
 	
-            在kubernetes集群中所有的node节点都需要安装网络插件才能让所有的Pod加入到同一个局域网中，本文是安装flannel网络插件的参考文档，具体操作可以参考正文
+            在kubernetes集群中kubectl是个非常重要的命令行工具，它的作用相当于docker的相关命令，可以通过自己定义的yaml文件启动相关pod及service相关资源
         
         </div>
     </a>
@@ -233,14 +197,32 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-master-installation/">
+    <a href="https://aeric.io/post/k8s-create-kubeconfig/">
         <h2 class="post-title">
-            Kubernetes集群部署Master节点服务
+            Kubernetes集群创建配置文件
         </h2>
 	
         <div class="post-content-preview">
 	
-            在Kubernetes集群中，Master节点上主要由kube-apiserver、kube-scheduler以及kube-controller-manager等服务维护整个集群的正常运行，本文主要介绍配置Master节点上的相关服务
+            kubelet 和 kube-proxy 等 Node 机器上的进程与 Master 机器的 kube-apiserver 进程通信时需要认证和授权，所以这里需要自己创建 kubeconfig 文件，具体操作可以参考如下
+        
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Friday, November 30, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/k8s-create-tls-and-keys/">
+        <h2 class="post-title">
+            Kubernetes 集群创建 TLS 证书及密钥
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书
         
         </div>
     </a>
@@ -257,13 +239,9 @@
 <ul class="pager">
     
     <li class="previous">
-        <a href="/tags/kubernetes/">&larr; Newer Posts</a>
+        <a href="/tags/kubernetes/page/2/">&larr; Newer Posts</a>
     </li>
     
-    
-    <li class="next">
-        <a href="/tags/kubernetes/page/3/">Older Posts &rarr;</a>
-    </li>
     
 </ul>
 

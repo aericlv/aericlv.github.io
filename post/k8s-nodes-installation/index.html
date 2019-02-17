@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书">
+    <meta name="description" content="在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes 集群创建 TLS 证书及密钥-吕啸腾的博客</title>
+    <title>Kubernetes集群部署Node节点服务-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-create-tls-and-keys/">
+    <link rel="canonical" href="/post/k8s-nodes-installation/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1fxtcy6jsv1j21ja0lo4f0.jpg')
+        background-image: url('https://wx3.sinaimg.cn/large/b258d7f7ly1fxx45xa3xzj21ja0loajs.jpg')
     }
 </style>
 <header class="intro-header">
@@ -152,7 +152,7 @@
                         </a>
                         
                     </div>
-                    <h1>Kubernetes 集群创建 TLS 证书及密钥</h1>
+                    <h1>Kubernetes集群部署Node节点服务</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -190,305 +190,261 @@
 <ul>
 <li>
 <ul>
-<li><a href="#创建tls证书及密钥">创建TLS证书及密钥</a>
+<li>
 <ul>
-<li><a href="#安装证书制作工具-cfssl">安装证书制作工具-CFSSL</a></li>
-<li><a href="#创建ca证书">创建CA证书</a></li>
-<li><a href="#创建-kubernetes-证书">创建 kubernetes 证书</a></li>
-<li><a href="#创建-admin-证书">创建 admin 证书</a></li>
-<li><a href="#创建-kube-proxy-证书">创建 kube-proxy 证书</a></li>
+<li><a href="#安装并配置-kubelet-服务">安装并配置 kubelet 服务</a></li>
+<li><a href="#安装并配置-kube-proxy-服务">安装并配置 kube-proxy 服务</a></li>
 </ul></li>
-<li><a href="#校验证书">校验证书</a></li>
-<li><a href="#分发证书">分发证书</a></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p>集群环境如下：</p>
+<p>kubernetes node 节点包含如下组件：</p>
 
-<pre><code class="language-bash">k8s-master: 192.168.8.66
-k8s-nodes:  192.168.8.67 192.168.8.68
-k8s-harbor: 192.168.8.69
+<pre><code class="language-bash">Flanneld
+Docker:docker直接用yum安装即可
+kubelet
+kube-proxy
+注意：每台 node 上都需要安装 flannel，master 节点上可以不必安装。
 </code></pre>
 
-<h2 id="创建tls证书及密钥">创建TLS证书及密钥</h2>
+<p>我们在前面已经配置了 Flanneld 和 Docker 服务，具体参见 <a href="../k8s-flannel-and-docker-config">配置 docker 及 flanneld 服务</a></p>
 
-<p><code>kubernetes</code>系统的各组件需要使用 <code>TLS</code> 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 <code>cfssl</code> 来生成 Certificate Authority (CA) 和其它证书；</p>
+<p>我们本次只安装 <code>kubelet</code> 和 <code>kube-proxy</code> 服务。</p>
 
-<p>集群TLS认证需要的证书及密钥如下：</p>
+<blockquote>
+<p>kubernets <code>v1.9</code> 相对于 kuberentes <code>v1.6</code> 集群，必须关闭swap，否则kubelet启动将失败。
+关闭 <code>swap</code> 只需修改 <code>/etc/fstab</code> 将，<code>swap</code> 系统注释掉。
+如果要临时关闭，可以用 <code>swapoff -a</code>， <code>-a</code> 表示关闭所有交换设备。</p>
+</blockquote>
 
-<pre><code class="language-bash">admin-key.pem
-admin.pem
-ca-key.pem
-ca.pem
-kube-proxy-key.pem
-kube-proxy.pem
-kubernetes-key.pem
-kubernetes.pem
+<h3 id="安装并配置-kubelet-服务">安装并配置 kubelet 服务</h3>
+
+<p>kubelet 启动时向 <code>kube-apiserver</code> 发送 <code>TLS bootstrapping</code> 请求，需要先将 <code>bootstrap token</code>文件中的 <code>kubelet-bootstrap</code> 用户赋予 <code>system:node-bootstrapper cluster</code> 角色(role)， 然后 kubelet 才能有权限创建认证请求(certificate signing requests)：</p>
+
+<pre><code class="language-bash">cd /etc/kubernetes
+kubectl create clusterrolebinding kubelet-bootstrap \
+  --clusterrole=system:node-bootstrapper \
+  --user=kubelet-bootstrap
 </code></pre>
 
-<p>集群各组件对证书的依赖如下：</p>
+<blockquote>
+<p><code>--user=kubelet-bootstrap</code> 是在 <code>/etc/kubernetes/token.csv</code> 文件中指定的用户名，同时也写入了 <code>/etc/kubernetes/bootstrap.kubeconfig</code> 文件；</p>
+</blockquote>
 
-<pre><code class="language-bash"># etcd：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kube-apiserver：使用 ca.pem、kubernetes-key.pem、kubernetes.pem；
-# kubelet：使用 ca.pem；
-# kube-proxy：使用 ca.pem、kube-proxy-key.pem、kube-proxy.pem；
-# kubectl：使用 ca.pem、admin-key.pem、admin.pem；
-# kube-controller-manager：使用 ca-key.pem、ca.pem
+<p>下载最新的 kubelet 和 kube-proxy 二进制文件,因为我们之前已经下载了 kubernetes 的 server 软件包，所以再贴一下，不再赘述：</p>
+
+<pre><code class="language-bash">wget https://dl.k8s.io/v1.9.6/kubernetes-server-linux-amd64.tar.gz
+tar -xzvf kubernetes-server-linux-amd64.tar.gz
+cd kubernetes
+tar -xzvf  kubernetes-src.tar.gz
+cp -r ./server/bin/{kube-proxy,kubelet} /usr/local/bin/
 </code></pre>
 
-<h3 id="安装证书制作工具-cfssl">安装证书制作工具-CFSSL</h3>
+<p><strong>创建 kubelet 的 System Unit 配置文件</strong></p>
 
-<p>安装前需要在 <code>/etc/profile</code> 文件中配置 <code>GOPATH</code> 变量，内容如下：</p>
+<p>kubelet 的 service 配置文件: <code>/usr/lib/systemd/system/kubelet.service</code></p>
 
-<pre><code class="language-bash">...
-export GOPATH=/usr/local/go
-...
-source /etc/profile
+<pre><code class="language-bash">[Unit]
+Description=Kubernetes Kubelet Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=docker.service
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/var/lib/kubelet
+EnvironmentFile=-/etc/kubernetes/config
+EnvironmentFile=-/etc/kubernetes/kubelet
+ExecStart=/usr/local/bin/kubelet \
+            $KUBE_LOGTOSTDERR \
+            $KUBE_LOG_LEVEL \
+            $KUBELET_API_SERVER \
+            $KUBELET_ADDRESS \
+            $KUBELET_PORT \
+            $KUBELET_HOSTNAME \
+            $KUBE_ALLOW_PRIV \
+            $KUBELET_POD_INFRA_CONTAINER \
+            $KUBELET_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
 </code></pre>
 
-<p>安装CFSSL</p>
+<p>kubelet 完整 Systemd Unit 文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/systemd/kubelet.service">kubelet.service</a></p>
 
-<pre><code class="language-bash">$ go get -u github.com/cloudflare/cfssl/cmd/...
-$ echo $GOPATH
-/usr/local/go
-$ ls /usr/local/go/bin/
-cfssl  cfssl-bundle  cfssl-certinfo  cfssljson  cfssl-newkey  cfssl-scan  mkbundle  multirootca
+<blockquote>
+<p>在启动 kubelet 之前，需要先手动创建 <code>/var/lib/kubelet</code> 目录。</p>
+</blockquote>
+
+<p><strong>创建 kubelet 的配置文件</strong></p>
+
+<blockquote>
+<p>本次安装的 kubernetes 的版本是 <code>v1.9.6</code> 版本，相对于较早版本 <code>v1.6</code>，有点变化：取消了 <code>KUBELET_API_SERVER</code> 的配置，而改用 kubeconfig 文件来定义 master 地址。 所以需要我们注释掉 <code>KUBELET_API_SERVER</code> 配置。</p>
+</blockquote>
+
+<p>修改后的 kubelet 配置文件 <code>/etc/kubernetes/kubelet</code> 参数如下：</p>
+
+<pre><code class="language-bash">###
+## kubernetes kubelet (minion) config
+#
+## The address for the info server to serve on (set to 0.0.0.0 or &quot;&quot; for all interfaces)
+KUBELET_ADDRESS=&quot;--address=192.168.8.67&quot;
+#
+## The port for the info server to serve on
+#KUBELET_PORT=&quot;--port=10250&quot;
+#
+## You may leave this blank to use the actual hostname
+KUBELET_HOSTNAME=&quot;--hostname-override=k8s-node1&quot;
+#
+## location of the api-server
+#KUBELET_API_SERVER=&quot;--api-servers=http://192.168.8.66:8080&quot;   v1.8+ 版本需要注释掉此参数
+#
+## pod infrastructure container
+KUBELET_POD_INFRA_CONTAINER=&quot;--pod-infra-container-image=192.168.8.69/library/pause-amd64:3.0&quot;
+#
+## Add your own!
+KUBELET_ARGS=&quot;--cgroup-driver=systemd --cluster-dns=10.254.0.2 --bootstrap-kubeconfig=/etc/kubernetes/bootstrap.kubeconfig --kubeconfig=/etc/kubernetes/kubelet.kubeconfig  --cert-dir=/etc/kubernetes/ssl --cluster-domain=cluster.local --hairpin-mode promiscuous-bridge --serialize-image-pulls=false --cgroups-per-qos=false --enforce-node-allocatable=&quot;&quot; &quot;
 </code></pre>
 
-<h3 id="创建ca证书">创建CA证书</h3>
-
-<p><strong>创建CA配置文件</strong></p>
-
-<pre><code class="language-bash">mkdir /root/ssl
-cd /root/ssl
-cfssl print-defaults config &gt; config.json
-cfssl print-defaults csr &gt; csr.json
-# 根据config.json文件的格式创建如下的ca-config.json文件
-# 过期时间设置成了 87600h
-cat &gt; ca-config.json &lt;&lt;EOF
-{
-  &quot;signing&quot;: {
-    &quot;default&quot;: {
-      &quot;expiry&quot;: &quot;87600h&quot;
-    },
-    &quot;profiles&quot;: {
-      &quot;kubernetes&quot;: {
-        &quot;usages&quot;: [
-            &quot;signing&quot;,
-            &quot;key encipherment&quot;,
-            &quot;server auth&quot;,
-            &quot;client auth&quot;
-        ],
-        &quot;expiry&quot;: &quot;87600h&quot;
-      }
-    }
-   }
-}
-EOF
-</code></pre>
-
-<p>字段说明如下：</p>
+<p><strong>参数说明</strong>：</p>
 
 <ul>
-<li><code>ca-config.json</code>：可以定义多个 profiles，分别指定不同的过期时间、使用场景等参数；后续在签名证书时使用某个 profile；</li>
-<li><code>signing</code>：表示该证书可用于签名其它证书；生成的 ca.pem 证书中 CA=TRUE；</li>
-<li><code>server auth</code>：表示client可以用该 CA 对server提供的证书进行验证；</li>
-<li><code>client auth</code>：表示server可以用该 CA 对client提供的证书进行验证；</li>
+<li><code>--address</code> 不能设置为 127.0.0.1，否则后续 Pods 访问 kubelet 的 API 接口时会失败，因为 Pods 访问的 127.0.0.1 指向自己而不是 kubelet；</li>
+<li>如果设置了 <code>--hostname-override</code> 选项，则 <code>ube-proxy</code> 也需要设置该选项，否则会出现找不到 Node 的情况；</li>
+<li><code>--cgroup-driver</code> 配置成 <code>systemd</code>，不要使用cgroup，否则在 CentOS 系统中 kubelet 将启动失败（保持docker和kubelet中的cgroup driver配置一致即可，不一定非使用systemd）。</li>
+<li><code>--experimental-bootstrap-kubeconfig</code> 指向 <code>bootstrap kubeconfig</code> 文件，kubelet 使用该文件中的用户名和 token 向 kube-apiserver 发送 TLS Bootstrapping 请求；</li>
+<li>管理员通过了 CSR 请求后，kubelet 自动在 <code>--cert-dir</code> 目录创建证书和私钥文件(kubelet-client.crt 和 kubelet-client.key)，然后写入 <code>--kubeconfig</code> 文件；</li>
+<li>建议在 <code>--kubeconfig</code> 配置文件中指定 <code>kube-apiserver</code> 地址，如果未指定 <code>--api-servers</code> 选项，则必须指定 <code>--require-kubeconfig</code> 选项后才从配置文件中读取 kube-apiserver 的地址，否则 kubelet 启动后将找不到 kube-apiserver (日志中提示未找到 API Server），kubectl get nodes 不会返回对应的 Node 信息;</li>
+<li><code>--cluster-dns</code> 指定 kubedns 的 Service IP(可以先分配，后续创建 kubedns 服务时指定该 IP)，<code>--cluster-domain</code> 指定域名后缀，这两个参数同时指定后才会生效；</li>
+<li><code>--cluster-domain</code> 指定 pod 启动时 <code>/etc/resolve.conf</code> 文件中的 search domain ，起初我们将其配置成了 cluster.local.，这样在解析 service 的 DNS 名称时是正常的，可是在解析 headless service 中的 FQDN pod name 的时候却错误，因此我们将其修改为 cluster.local，去掉嘴后面的 ”点号“ 就可以解决该问题，关于 kubernetes 中的域名/服务名称解析请参见我的另一篇文章。</li>
+<li><code>--kubeconfig=/etc/kubernetes/kubelet.kubeconfig</code> 中指定的 <code>kubelet.kubeconfig</code> 文件在第一次启动 kubelet 之前并不存在，请看下文，当通过CSR请求后会自动生成 <code>kubelet.kubeconfig</code>文件，如果你的节点上已经生成了 <code>~/.kube/config</code> 文件，你可以将该文件拷贝到该路径下，并重命名为 <code>kubelet.kubeconfig</code>，所有 node 节点可以共用同一个 <code>kubelet.kubeconfig</code> 文件，这样新添加的节点就不需要再创建CSR请求就能自动添加到 kubernetes 集群中。同样，在任意能够访问到 kubernetes 集群的主机上使用 <code>kubectl --kubeconfig</code> 命令操作集群时，只要使用 <code>~/.kube/config</code> 文件就可以通过权限认证，因为这里面已经有认证信息并认为你是 admin 用户，对集群拥有所有权限。</li>
+<li><code>KUBELET_POD_INFRA_CONTAINER</code> 是基础镜像容器，这里我用的是私有镜像仓库地址，大家部署的时候需要修改为自己的镜像。 pod-infrastructure 镜像是 Redhat 制作的，大小接近80M，下载比较耗时，其实该镜像并不运行什么具体进程，可以使用 Google 的 pause 镜像 <code>gcr.io/google_containers/pause-amd64:3.0</code>，这个镜像只有300多K，比较容易下载和配置。</li>
 </ul>
 
-<p><strong>创建 CA 证书签名请求</strong></p>
+<p>完整 kubelet 配置文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/config/kubelet">kubelet</a></p>
 
-<pre><code class="language-bash">cat &gt; ca-csr.json &lt;&lt; EOF
-    {
-      &quot;CN&quot;: &quot;kubernetes&quot;,
-      &quot;key&quot;: {
-        &quot;algo&quot;: &quot;rsa&quot;,
-        &quot;size&quot;: 2048
-      },
-      &quot;names&quot;: [
-        {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-        }
-      ]
-    }
-    EOF
+<blockquote>
+<p>其他 node 节点上的 kubelet 配置文件对应的 IP 地址需要改为每台 node 节点的 IP 地址。
+主要需要修改 <code>KUBELET_ADDRESS</code> 和 <code>KUBELET_HOSTNAME</code> 参数。
+后期如果需要加 node ，需要修改其他机器的 hosts 文件，否则无法查看新 node 上的 pod 日志。</p>
+</blockquote>
+
+<p><strong>启动 kubelet 服务</strong></p>
+
+<p>我们修改完相关参数后就可以启动 kubelet 服务了。</p>
+
+<pre><code class="language-bash">systemctl daemon-reload
+systemctl start kubelet
+systemctl enable kubelet
+systemctl status kubelet
 </code></pre>
 
-<p>字段说明如下：</p>
+<p><strong>通过 kublet 的 TLS 证书请求</strong></p>
+
+<p>kubelet 首次启动时向 kube-apiserver 发送证书签名请求，必须通过后 kubernetes 系统才会将该 Node 加入到集群。</p>
+
+<p>查看未授权的 CSR 请求:</p>
+
+<pre><code class="language-bash">$ kubectl get csr
+NAME        AGE       REQUESTOR           CONDITION
+csr-2b308   4m        kubelet-bootstrap   Pending
+$ kubectl get nodes
+No resources found.
+</code></pre>
+
+<p>通过 CSR 请求:</p>
+
+<pre><code class="language-bash">$ kubectl certificate approve csr-2b308
+certificatesigningrequest &quot;csr-2b308&quot; approved
+[root@k8s-master kubernetes]# kubectl get nodes
+NAME        STATUS    ROLES     AGE       VERSION
+k8s-node1   Ready     &lt;none&gt;    34d       v1.9.6
+</code></pre>
+
+<p>此时，自动生成了 kubelet kubeconfig 文件和公私钥：</p>
+
+<pre><code class="language-bash">[root@k8s-node1 ~]# ls -l /etc/kubernetes/kubelet.kubeconfig
+-rw------- 1 root root 2215 Apr  6 18:15 /etc/kubernetes/kubelet.kubeconfig
+[root@k8s-node1 ~]# ls -l /etc/kubernetes/ssl/kubelet*
+-rw-r--r-- 1 root root 1042 Apr  6 18:15 /etc/kubernetes/ssl/kubelet-client.crt
+-rw------- 1 root root  227 Apr  6 18:08 /etc/kubernetes/ssl/kubelet-client.key
+-rw-r--r-- 1 root root 1111 Apr  6 18:08 /etc/kubernetes/ssl/kubelet.crt
+-rw------- 1 root root 1679 Apr  6 18:08 /etc/kubernetes/ssl/kubelet.key
+</code></pre>
+
+<p>假如你更新 kubernetes 的证书，只要没有更新 token.csv，当重启 kubelet 后，该 node 就会自动加入到 kuberentes 集群中，而不会重新发送 certificaterequest，也不需要在 master 节点上执行 <code>kubectl certificate approve</code>操作。前提是不要删除 node 节点上的<code>/etc/kubernetes/ssl/kubelet*</code> 和 <code>/etc/kubernetes/kubelet.kubeconfig</code> 文件。否则kubelet启动时会提示找不到证书而失败。
+&gt; 如果启动 kubelet 的时候见到证书相关的报错，有个 trick 可以解决这个问题，可以将 master 节点上的 <code>~/.kube/config</code> 文件（该文件在安装 kubectl 命令行工具这一步中将会自动生成）拷贝到 node 节点的 <code>/etc/kubernetes/kubelet.kubeconfig</code> 位置，这样就不需要通过 CSR，当 kubelet 启动后就会自动加入的集群中。</p>
+
+<h3 id="安装并配置-kube-proxy-服务">安装并配置 kube-proxy 服务</h3>
+
+<p>安装 conntrack</p>
+
+<pre><code class="language-bash">yum -y install conntrack-tools
+</code></pre>
+
+<p><strong>创建 kube-proxy 的 Systemd Unit文件</strong></p>
+
+<p>unit 文件路径：<code>/usr/lib/systemd/system/kube-proxy.service</code></p>
+
+<pre><code class="language-bash">[Unit]
+Description=Kubernetes Kube-Proxy Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/kubernetes/config
+EnvironmentFile=-/etc/kubernetes/proxy
+ExecStart=/usr/local/bin/kube-proxy \
+        $KUBE_LOGTOSTDERR \
+        $KUBE_LOG_LEVEL \
+        $KUBE_MASTER \
+        $KUBE_PROXY_ARGS
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+
+<p>完整 system unit 文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/systemd/kube-proxy.service">kube-proxy.service</a></p>
+
+<p><strong>创建 kube-proxy 的配置文件</strong></p>
+
+<p>kube-poxy 配置文件路径： <code>/etc/kubernetes/proxy</code></p>
+
+<pre><code class="language-bash">###
+# kubernetes proxy config
+
+# default config should be adequate
+
+# Add your own!
+KUBE_PROXY_ARGS=&quot;--bind-address=192.168.8.67 --hostname-override=k8s-node1 --kubeconfig=/etc/kubernetes/kube-proxy.kubeconfig --cluster-cidr=10.254.0.0/16&quot;
+</code></pre>
+
+<p><strong>参数说明</strong></p>
 
 <ul>
-<li>&ldquo;CN&rdquo;：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；</li>
-<li>&ldquo;O&rdquo;：Organization，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；</li>
+<li><code>--hostname-override</code> 参数值必须与 kubelet 的值一致，否则 kube-proxy 启动后会找不到该 Node，从而不会创建任何 iptables 规则；</li>
+<li><code>kube-proxy</code> 根据 <code>-cluster-cidr</code> 判断集群内部和外部流量，指定 <code>--cluster-cidr</code> 或 <code>--masquerade-all</code> 选项后 kube-proxy 才会对访问 Service IP 的请求做 SNAT；</li>
+<li><code>--kubeconfig</code> 指定的配置文件嵌入了 kube-apiserver 的地址、用户名、证书、秘钥等请求和认证信息；</li>
 </ul>
 
-<p><strong>生成 CA 证书和密钥</strong></p>
+<p>预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 kube-apiserver Proxy 相关 API 的权限；</p>
 
-<pre><code class="language-bash">$ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-$ ls ca*
-ca-config.json  ca.csr  ca-csr.json  ca-key.pem  ca.pem
+<p>完整 kube-proxy 配置文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/config/proxy">proxy</a></p>
+
+<p><strong>启动 kube-proxy 服务</strong></p>
+
+<pre><code class="language-bash">systemctl daemon-reload
+systemctl start kube-proxy
+systemctl enable kube-proxy
+systemctl status kube-proxy
 </code></pre>
 
-<h3 id="创建-kubernetes-证书">创建 kubernetes 证书</h3>
-
-<p><strong>创建 kubernetes 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kubernetes-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;kubernetes&quot;,
-  &quot;hosts&quot;: [
-    &quot;127.0.0.1&quot;,
-    &quot;192.168.8.66&quot;,
-    &quot;192.168.8.67&quot;,
-    &quot;192.168.8.68&quot;,
-    &quot;192.168.8.69&quot;,
-    &quot;10.254.0.1&quot;,
-    &quot;kubernetes&quot;,
-    &quot;kubernetes.default&quot;,
-    &quot;kubernetes.default.svc&quot;,
-    &quot;kubernetes.default.svc.cluster&quot;,
-    &quot;kubernetes.default.svc.cluster.local&quot;
-  ],
-  &quot;key&quot;: {
-      &quot;algo&quot;: &quot;rsa&quot;,
-      &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-      {
-          &quot;C&quot;: &quot;CN&quot;,
-          &quot;ST&quot;: &quot;BeiJing&quot;,
-          &quot;L&quot;: &quot;BeiJing&quot;,
-          &quot;O&quot;: &quot;k8s&quot;,
-          &quot;OU&quot;: &quot;System&quot;
-      }
-  ]
-}
-EOF
-</code></pre>
-
-<p>如果 hosts 字段不为空则需要指定授权使用该证书的 IP 或域名列表，由于该证书后续被 etcd 集群和 kubernetes master 集群使用，所以上面分别指定了 etcd 集群、kubernetes master 集群的主机 IP 和 kubernetes 服务的服务 IP（一般是 kube-apiserver 指定的 service-cluster-ip-range 网段的第一个IP，如 10.254.0.1。hosts 中的内容可以为空，即使按照上面的配置，向集群中增加新节点后也不需要重新生成证书。</p>
-
-<p><strong>生成 kubernetes 证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes
-# ls kubernetes*
-kubernetes.csr  kubernetes-csr.json  kubernetes-key.pem  kubernetes.pem
-</code></pre>
-
-<h3 id="创建-admin-证书">创建 admin 证书</h3>
-
-<p><strong>创建 admin 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; admin-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;admin&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;system:masters&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明：</p>
-
-<ul>
-<li>后续 kube-apiserver 使用 RBAC 对客户端(如 kubelet、kube-proxy、Pod)请求进行授权，kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 cluster-admin 将 Group system:masters 与 Role cluster-admin 绑定，该 Role 授予了调用kube-apiserver 的所有 API的权限；</li>
-<li>OU 指定该证书的 Group 为 system:masters，kubelet 使用该证书访问 kube-apiserver 时 ，由于证书被 CA 签名，所以认证通过，同时由于证书用户组为经过预授权的 system:masters，所以被授予访问所有 API 的权限；</li>
-</ul>
-
-<p><strong>生成 admin 证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
-# ls admin*
-admin.csr  admin-csr.json  admin-key.pem  admin.pem
-</code></pre>
-
-<h3 id="创建-kube-proxy-证书">创建 kube-proxy 证书</h3>
-
-<p><strong>创建 kube-proxy 证书签名请求文件</strong></p>
-
-<pre><code class="language-bash">cat &gt; kube-proxy-csr.json &lt;&lt; EOF
-{
-  &quot;CN&quot;: &quot;system:kube-proxy&quot;,
-  &quot;hosts&quot;: [],
-  &quot;key&quot;: {
-    &quot;algo&quot;: &quot;rsa&quot;,
-    &quot;size&quot;: 2048
-  },
-  &quot;names&quot;: [
-    {
-      &quot;C&quot;: &quot;CN&quot;,
-      &quot;ST&quot;: &quot;BeiJing&quot;,
-      &quot;L&quot;: &quot;BeiJing&quot;,
-      &quot;O&quot;: &quot;k8s&quot;,
-      &quot;OU&quot;: &quot;System&quot;
-    }
-  ]
-}
-EOF
-</code></pre>
-
-<p>字段说明如下：</p>
-
-<ul>
-<li>CN 指定该证书的 User 为 system:kube-proxy；</li>
-<li>kube-apiserver 预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 kube-apiserver Proxy 相关 API 的权限；</li>
-</ul>
-
-<p><strong>生成 kube-proxy 客户端证书和私钥</strong></p>
-
-<pre><code class="language-bash"># cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes  kube-proxy-csr.json | cfssljson -bare kube-proxy
-# ls kube-proxy*
-kube-proxy.csr  kube-proxy-csr.json  kube-proxy-key.pem  kube-proxy.pem
-</code></pre>
-
-<h2 id="校验证书">校验证书</h2>
-
-<p>以 kubernetes 证书为例</p>
-
-<p><strong>使用 openssl 命令校验</strong></p>
-
-<pre><code class="language-bash">openssl x509  -noout -text -in  kubernetes.pem
-</code></pre>
-
-<p>需要确认的信息如下：</p>
-
-<ul>
-<li>确认 Issuer 字段的内容和 ca-csr.json 一致；</li>
-<li>确认 Subject 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Subject Alternative Name 字段的内容和 kubernetes-csr.json 一致；</li>
-<li>确认 X509v3 Key Usage、Extended Key Usage 字段的内容和 ca-config.json 中 kubernetes profile 一致；</li>
-</ul>
-
-<p><strong>使用 fssl-certinfo 命令校验</strong></p>
-
-<pre><code class="language-bash">cfssl-certinfo -cert kubernetes.pem
-</code></pre>
-
-<h2 id="分发证书">分发证书</h2>
-
-<p>将生成的证书和秘钥文件（后缀名为.pem）拷贝到所有机器的 <code>/etc/kubernetes/ssl</code> 目录下备用；</p>
-
-<pre><code class="language-bash">mkdir -p /etc/kubernetes/ssl
-cp *.pem /etc/kubernetes/ssl
-</code></pre>
+<p>至此，整个 kubernetes 集群安装完成，剩下的工作就是在集群上安装各种必要组件了，包括 dns、dashboard、heapster等等；</p>
 
 
                 
@@ -537,13 +493,13 @@ cp *.pem /etc/kubernetes/ssl
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/docker-other-config/" data-toggle="tooltip" data-placement="top" title="Docker 服务的一些常用配置">&larr;
+                        <a href="/post/k8s-flannel-and-docker-config/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群配置Flannel服务">&larr;
                             Previous Post</a>
                     </li>
                     
                     
                     <li class="next">
-                        <a href="/post/k8s-create-kubeconfig/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群创建配置文件">Next
+                        <a href="/post/k8s-dns-addons-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群部署DNS插件">Next
                             Post &rarr;</a>
                     </li>
                     

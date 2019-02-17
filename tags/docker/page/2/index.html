@@ -179,14 +179,32 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/k8s-create-tls-and-keys/">
+    <a href="https://aeric.io/post/k8s-dns-addons-installation/">
         <h2 class="post-title">
-            Kubernetes 集群创建 TLS 证书及密钥
+            Kubernetes集群部署DNS插件
         </h2>
 	
         <div class="post-content-preview">
 	
-            Kubernetes 系统的各组件需要使用 TLS 证书对通信进行加密，本文档使用 CloudFlare 的 PKI 工具集 cfssl 来生成 Certificate Authority (CA) 和其它证书
+            kube-dns 官方的 yaml 文件其实在我们先前下载的 kubernetes server 软件包内，具体路径为：/srv/kubernetes/cluster/addons/dns 我是把 kuberntes 解压
+       
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Saturday, December 1, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/k8s-nodes-installation/">
+        <h2 class="post-title">
+            Kubernetes集群部署Node节点服务
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务
         
         </div>
     </a>
@@ -197,55 +215,37 @@
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/docker-other-config/">
+    <a href="https://aeric.io/post/k8s-flannel-and-docker-config/">
         <h2 class="post-title">
-            Docker 服务的一些常用配置
+            Kubernetes集群配置Flannel服务
         </h2>
 	
         <div class="post-content-preview">
 	
-            在日常使用 docker 的过程中，一般 docker 默认的配置不能满足我们正常的业务需要，这个时候就需要我们对 docker 做一些其他的配置来实现我们的需求或者功能
+            在kubernetes集群中所有的node节点都需要安装网络插件才能让所有的Pod加入到同一个局域网中，本文是安装flannel网络插件的参考文档，具体操作可以参考正文
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Sunday, July 29, 2018
+    Posted by      Aeric Friday, November 30, 2018
     </p>
 </div>
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/docker-image-accelerator-installation/">
+    <a href="https://aeric.io/post/k8s-master-installation/">
         <h2 class="post-title">
-            Docker 配置镜像加速器
+            Kubernetes集群部署Master节点服务
         </h2>
 	
         <div class="post-content-preview">
 	
-            国内从 Docker Hub 拉取镜像有时会遇到困难，此时可以配置镜像加速器。Docker 官方和国内很多云服务商都提供了国内加速器服务，本文档主要介绍如何配置镜像加速器
+            在Kubernetes集群中，Master节点上主要由kube-apiserver、kube-scheduler以及kube-controller-manager等服务维护整个集群的正常运行，本文主要介绍配置Master节点上的相关服务
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Saturday, July 28, 2018
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/docker-installation-guide/">
-        <h2 class="post-title">
-            CentOS 7 安装 Docker
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            docker 的安装方式有好多种，除了直接用自带的 yum 源安装外，官方还提供了 docker 各个版本的 yum 源，本次安装选择在 CentOS 7 系统上安装免费版的的 ce 版本
-        
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Friday, July 27, 2018
+    Posted by      Aeric Friday, November 30, 2018
     </p>
 </div>
 <hr>

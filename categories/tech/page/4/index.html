@@ -161,55 +161,91 @@
             
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/docker-image-accelerator-installation/">
+    <a href="https://aeric.io/post/k8s-nodes-installation/">
         <h2 class="post-title">
-            Docker 配置镜像加速器
+            Kubernetes集群部署Node节点服务
         </h2>
 	
         <div class="post-content-preview">
 	
-            国内从 Docker Hub 拉取镜像有时会遇到困难，此时可以配置镜像加速器。Docker 官方和国内很多云服务商都提供了国内加速器服务，本文档主要介绍如何配置镜像加速器
+            在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Saturday, July 28, 2018
+    Posted by      Aeric Friday, November 30, 2018
     </p>
 </div>
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/docker-installation-guide/">
+    <a href="https://aeric.io/post/k8s-flannel-and-docker-config/">
         <h2 class="post-title">
-            CentOS 7 安装 Docker
+            Kubernetes集群配置Flannel服务
         </h2>
 	
         <div class="post-content-preview">
 	
-            docker 的安装方式有好多种，除了直接用自带的 yum 源安装外，官方还提供了 docker 各个版本的 yum 源，本次安装选择在 CentOS 7 系统上安装免费版的的 ce 版本
+            在kubernetes集群中所有的node节点都需要安装网络插件才能让所有的Pod加入到同一个局域网中，本文是安装flannel网络插件的参考文档，具体操作可以参考正文
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Friday, July 27, 2018
+    Posted by      Aeric Friday, November 30, 2018
     </p>
 </div>
 <hr>
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/docker-introduction/">
+    <a href="https://aeric.io/post/k8s-master-installation/">
         <h2 class="post-title">
-            容器 Docker 入门介绍
+            Kubernetes集群部署Master节点服务
         </h2>
 	
         <div class="post-content-preview">
 	
-            Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，Docker 使用谷歌公司自己开发的 GO 语言实现。
+            在Kubernetes集群中，Master节点上主要由kube-apiserver、kube-scheduler以及kube-controller-manager等服务维护整个集群的正常运行，本文主要介绍配置Master节点上的相关服务
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Thursday, July 26, 2018
+    Posted by      Aeric Friday, November 30, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/k8s-etcd-cluster-installation/">
+        <h2 class="post-title">
+            Kubernetes集群创建高可用etcd集群
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            kuberntes 集群使用 etcd 存储所有数据,本部分我们介绍部署一个三节点的高可用 etcd 集群，这三个节点复用 kubernetes master 主机
+        
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Friday, November 30, 2018
+    </p>
+</div>
+<hr>
+
+<div class="post-preview">
+    <a href="https://aeric.io/post/k8s-kubectl-installation/">
+        <h2 class="post-title">
+            Kubernetes集群安装kubectl工具
+        </h2>
+	
+        <div class="post-content-preview">
+	
+            在kubernetes集群中kubectl是个非常重要的命令行工具，它的作用相当于docker的相关命令，可以通过自己定义的yaml文件启动相关pod及service相关资源
+        
+        </div>
+    </a>
+    <p class="post-meta">
+    Posted by      Aeric Friday, November 30, 2018
     </p>
 </div>
 <hr>
@@ -224,6 +260,10 @@
         <a href="/categories/tech/page/3/">&larr; Newer Posts</a>
     </li>
     
+    
+    <li class="next">
+        <a href="/categories/tech/page/5/">Older Posts &rarr;</a>
+    </li>
     
 </ul>
 
