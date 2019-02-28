@@ -6,10 +6,19 @@
     <description>Recent content in TECH on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 27 Jan 2019 21:09:35 +0800</lastBuildDate>
+    <lastBuildDate>Wed, 27 Feb 2019 18:59:07 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/categories/tech/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Prometheus 入门介绍</title>
+      <link>https://aeric.io/post/prometheus-introduction/</link>
+      <pubDate>Wed, 27 Feb 2019 18:59:07 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/prometheus-introduction/</guid>
+      <description>Prometheus 系统简介 首先，Prometheus 受启发于 Google 的 Brogmon 监控系统，相似的 Kubernetes 是从 Google 的 Brog 系统演变而来，从 2012 年开始由前 Google 工程师在 Soundcloud 以开源软件的形式进行研</description>
+    </item>
     
     <item>
       <title>容器化部署 Consul 集群</title>

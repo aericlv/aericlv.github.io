@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="本次 Mesos 集群部署主要基于Zookeeper&#43;Mesos&#43;Marathon&#43;Docker，各个组件均需单独部署并配置，具体安装配置过程可以参考如下过程，">
+    <meta name="description" content="Prometheus 是一个开放性的监控解决方案，用户可以非常方便的安装和使用 Prometheus 并且能够非常方便的对其进行扩展，本文档先简单介绍一下 Prometheus">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Mesos集群二进制方式部署二 -吕啸腾的博客</title>
+    <title>Prometheus 入门介绍-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/mesos-cluster-installation-b/">
+    <link rel="canonical" href="/post/prometheus-introduction/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1fynwhg6digj21ja0logrm.jpg')
+        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1g0maj7m2y2j21ja0lokao.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,20 +143,12 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/docker" title="Docker">
-                            Docker
-                        </a>
-                        
-                        <a class="tag" href="/tags/mesos" title="Mesos">
-                            Mesos
-                        </a>
-                        
-                        <a class="tag" href="/tags/marathon" title="Marathon">
-                            Marathon
+                        <a class="tag" href="/tags/prometheus" title="Prometheus">
+                            Prometheus
                         </a>
                         
                     </div>
-                    <h1>Mesos集群二进制方式部署二 </h1>
+                    <h1>Prometheus 入门介绍</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -164,7 +156,7 @@
 			         Aeric
 			 
 			on 
-			Saturday, January 12, 2019
+			Wednesday, February 27, 2019
                         
                     </span>
                 </div>
@@ -194,16 +186,13 @@
 <ul>
 <li>
 <ul>
-<li>
+<li><a href="#prometheus-系统简介">Prometheus 系统简介</a></li>
+<li><a href="#prometheus-核心组件">Prometheus 核心组件</a>
 <ul>
-<li><a href="#安装并配置-zookeeper">安装并配置 Zookeeper</a>
-<ul>
-<li><a href="#下载-zookeeper">下载 zookeeper</a></li>
-<li><a href="#配置-zookeeper">配置 Zookeeper</a></li>
-</ul></li>
-<li><a href="#安装配置-mesos-master-节点">安装配置 Mesos-Master 节点</a></li>
-<li><a href="#配置-marathon">配置 Marathon</a></li>
-<li><a href="#配置-mesos-slave-节点">配置 Mesos-Slave 节点</a></li>
+<li><a href="#prometheus-server">Prometheus Server</a></li>
+<li><a href="#exporters">Exporters</a></li>
+<li><a href="#alertmanager">AlertManager</a></li>
+<li><a href="#pushgateway">PushGateway</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -211,244 +200,71 @@
                 
                 
 
-<p>本次部署基于 Zookeeper+Mesos+Marathon+Docker，具体部署环境如下：</p>
+<h2 id="prometheus-系统简介">Prometheus 系统简介</h2>
 
-<pre><code class="language-bash">mesos-master1   172.16.8.120   mesos+zookeeper+marathon
-mesos-master2   172.16.8.121   mesos+zookeeper+marathon
-mesos-master3   172.16.8.122   mesos+zookeeper+marathon
-mesos-slave1    172.16.8.110   mesos+docker
-</code></pre>
+<p>首先，Prometheus 受启发于 Google 的 Brogmon 监控系统，相似的 Kubernetes 是从 Google 的 Brog 系统演变而来，从 2012 年开始由前 Google 工程师在 Soundcloud 以开源软件的形式进行研发，并且于 2015 年早期对外发布早期版本。2016 年 5 月继 Kubernetes 之后成为第二个正式加入 CNCF 基金会的项目，同年 6 月正式发布 1.0 版本。2017 年底发布了基于全新存储层的 2.0 版本，能更好地与容器平台、云平台配合。</p>
 
-<p>上述所有机器系统版本如下：</p>
+<p>Prometheus 的发展简史如下图所示：</p>
 
-<pre><code class="language-bash">[root@mesos-master1 ~]# java -version
-openjdk version &quot;1.8.0_191&quot;
-OpenJDK Runtime Environment (build 1.8.0_191-b12)
-OpenJDK 64-Bit Server VM (build 25.191-b12, mixed mode)
-</code></pre>
+<p><img src="https://wx1.sinaimg.cn/large/b258d7f7ly1g0lwpo57jaj20o507hwfr.jpg" alt="Prometheus 简史" /></p>
 
-<pre><code class="language-bash">[root@mesos-master1 ~]# uname -r
-4.19.0-1.el7.elrepo.x86_64
-[root@mesos-master1 ~]# cat /etc/redhat-release 
-CentOS Linux release 7.5.1804 (Core) 
-</code></pre>
+<p>作为新一代监控系统，Prometheus 可以说是彻底颠覆了传统的监控系统，作为监控系统，一般都离不开以下监控<strong>目标</strong>：</p>
 
-<blockquote>
-<p>在部署基本组件之前需要先配置好各个机器上的 Java 环境，这里不再赘述</p>
-</blockquote>
+<ul>
+<li><strong>长期趋势分析：</strong>通过对监控样本数据的持续收集和统计，对监控指标进行长期趋势分析。例如，通过对磁盘空间增长率的判断，我们可以提前预测在未来什么时间节点上需要对资源进行扩容。</li>
+<li><strong>对照分析：</strong>两个版本的系统运行资源使用情况的差异如何？在不同容量情况下系统的并发和负载变化如何？通过监控能够方便的对系统进行跟踪和比较。</li>
+<li><strong>告警：</strong>当系统出现或者即将出现故障时，监控系统需要迅速反应并通知管理员，从而能够对问题进行快速的处理或者提前预防问题的发生，避免出现对业务的影响。</li>
+<li><strong>故障分析与定位：</strong>当问题发生后，需要对问题进行调查和处理。通过对不同监控监控以及历史数据的分析，能够找到并解决根源问题。</li>
+<li><strong>数据可视化：</strong>通过可视化仪表盘能够直接获取系统的运行状态、资源使用情况、以及服务运行状态等直观的信息。</li>
+</ul>
 
-<p>所有主机上的 <code>hosts</code> 文件如下所示：</p>
+<p>与传统监控系统相比， Prometheus 是一个开源的完整监控解决方案，其对传统监控系统的测试和告警模型进行了彻底的颠覆，形成了基于中央化的规则计算、统一分析和告警的新模型。Prometheus 具有许多独特的<strong>优势</strong>：</p>
 
-<pre><code class="language-bash">127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
-172.16.8.110 mesos-slave1
-172.16.8.120 mesos-master1
-172.16.8.121 mesos-master2
-172.16.8.122 mesos-master3
-</code></pre>
+<ul>
+<li><strong>易于管理:</strong> Prometheus 核心部分只有一个单独的二进制文件，不存在任何的第三方依赖(数据库，缓存等等)。唯一需要的就是本地磁盘，因此不会有潜在级联故障的风险。Prometheus 基于 Pull 模型的架构方式，可以在任何地方（本地电脑，开发环境，测试环境）搭建我们的监控系统。对于一些复杂的情况，还可以使用Prometheus 服务发现 (Service Discovery) 的能力动态管理监控目标。</li>
+<li><strong>监控服务的内部运行状态:</strong> Pometheus 鼓励用户监控服务的内部状态，基于 Prometheus 丰富的 Client 库，用户可以轻松的在应用程序中添加对 Prometheus 的支持，从而让用户可以获取服务和应用内部真正的运行状态。</li>
+<li><strong>数据模型:</strong> Prometheus 所有采集的监控数据均以指标 (metric) 的形式保存在内置的时间序列数据库当中(TSDB)。所有的样本除了基本的指标名称以外，还包含一组用于描述该样本特征的标签。每一条时间序列由指标名称(Metrics Name)以及一组标签(Labels)唯一标识。每条时间序列按照时间的先后顺序存储一系列的样本值。</li>
+<li><strong>查询语言PromQL:</strong> Prometheus 内置了一个强大的数据查询语言 PromQL。 通过 PromQL 可以实现对监控数据的查询、聚合。同时 PromQL 也被应用于数据可视化(如Grafana)以及告警当中。</li>
+<li><strong>高效、可扩展、易于集成:</strong> Prometheus 对于联邦集群的支持，可以让多个 Prometheus 实例产生一个逻辑集群，当单实例 Prometheus Server 处理的任务量过大时，通过使用功能分区(sharding)+联邦集群(federation)可以对其进行扩展。使用Prometheus可以快速搭建监控服务，并且可以非常方便地在应用程序中进行集成。</li>
+<li>Prometheus 还有许多特性，这里不再一一赘述，详细信息可以查阅<a href="https://prometheus.io/docs/introduction/overview/">官方文档</a></li>
+</ul>
 
-<h3 id="安装并配置-zookeeper">安装并配置 Zookeeper</h3>
+<h2 id="prometheus-核心组件">Prometheus 核心组件</h2>
 
-<p>Zookeeper 的安装方式有多种，常用的一般是用源码二进制的方式（tar包）安装，另一种是直接用 yum 安装。</p>
+<p>上一节中，简单介绍了 Prometheus 监控系统的由来和特性，这里我们将详细介绍一下 Prometheus 监控的核心组件和工作原理。</p>
 
-<p>二进制方式安装可以参考：<a href="https://www.jianshu.com/p/950fb55ea53a">https://www.jianshu.com/p/950fb55ea53a</a></p>
+<p>Prometheus 的基本架构图如下图所示：</p>
 
-<p>为了可以安装较新版本的 zookeeper 本次安装使用二进制方式安装，具体内容如下：</p>
+<p><img src="https://prometheus.io/assets/architecture.png" alt="Prometheus 基本架构图" /></p>
 
-<p>Zookeeper 的官方站点：<a href="https://zookeeper.apache.org/">https://zookeeper.apache.org/</a></p>
+<h3 id="prometheus-server">Prometheus Server</h3>
 
-<p>Zookeeper 的官方下载地址：<a href="https://zookeeper.apache.org/releases.html">https://zookeeper.apache.org/releases.html</a> 我们可以在官方站点下载我们需要的版本即可。</p>
+<p>Prometheus Server 是 Prometheus 组件中的核心部分，负责实现对监控数据的获取，存储以及查询。 Prometheus Server 可以通过静态配置管理监控目标，也可以配合使用 Service Discovery 的方式动态管理监控目标，并从这些监控目标中获取数据。其次 Prometheus Server 需要对采集到的监控数据进行存储，Prometheus Server 本身就是一个时序数据库，将采集到的监控数据按照时间序列的方式存储在本地磁盘当中。最后 Prometheus Server 对外提供了自定义的 PromQL 语言，实现对数据的查询以及分析。</p>
 
-<h4 id="下载-zookeeper">下载 zookeeper</h4>
+<p>Prometheus Server 内置的 Express Browser UI，通过这个 UI 可以直接通过 PromQL 实现数据的查询以及可视化。</p>
 
-<pre><code class="language-bash">$ wget http://apache.01link.hk/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz
-$ tar xf zookeeper-3.4.13.tar.gz -C /srv/
-</code></pre>
+<p>Prometheus Server 的联邦集群能力可以使其从其他的 Prometheus Server 实例中获取数据，因此在大规模监控的情况下，可以通过联邦集群以及功能分区的方式对 Prometheus Server 进行扩展。</p>
 
-<h4 id="配置-zookeeper">配置 Zookeeper</h4>
+<h3 id="exporters">Exporters</h3>
 
-<p>我们需要在所有 master 节点上手动创建 zookeeper 的数据及日志存放目录：</p>
+<p>Exporter 将监控数据采集的端点通过 HTTP 服务的形式暴露给 Prometheus Server，然后 Prometheus Server 通过访问该 Exporter 提供的 Endpoint 端点，即可获取到需要采集的监控数据。</p>
 
-<pre><code class="language-bash">$ mkdir -pv /data/zookeeper/{data,logs}
-</code></pre>
+<p>一般来说可以将 Exporter 分为 2 类：</p>
 
-<p>准备 zookeeper 的配置文件：</p>
+<ul>
+<li><strong>直接采集</strong>：这一类 Exporter 直接内置了对 Prometheus 监控的支持，比如 cAdvisor，Kubernetes，Etcd，Gokit等，都直接内置了用于向 Prometheus 暴露监控数据的端点。</li>
+<li><strong>间接采集</strong>：间接采集，原有监控目标并不直接支持 Prometheus，因此我们需要通过 Prometheus 提供的 Client Library 编写该监控目标的监控采集程序。例如: Mysql Exporter，JMX Exporter，Consul Exporter等。</li>
+</ul>
 
-<pre><code class="language-bash">$ cp /srv/zookeeper-3.4.13/conf/zoo_sample.cfg /srv/zookeeper-3.4.13/conf/zoo.cfg
+<h3 id="alertmanager">AlertManager</h3>
 
-# 修改配置文件内容如下：
-$ cat /srv/zookeeper/conf/zoo.cfg | grep -v '^#' | grep -v '^$'
-tickTime=2000
-initLimit=10
-syncLimit=5
-dataDir=/data/zookeeper/data
-dataLogDir=/data/zookeeper/logs
-clientPort=2181
-server.1=mesos-master1:2888:3888
-server.2=mesos-master2:2888:3888
-server.3=mesos-master3:2888:3888
-</code></pre>
+<p>在 Prometheus Server 中支持基于 PromQL 创建告警规则，如果满足 PromQL 定义的规则，则会产生一条告警，而告警的后续处理流程则由 AlertManager 进行管理。在 AlertManager 中我们可以与邮件，Slack 等等内置的通知方式进行集成，也可以通过 Webhook 自定义告警处理方式。AlertManager 即 Prometheus 体系中的告警处理中心。</p>
 
-<blockquote>
-<p>所有节点上的配置文件一致</p>
-</blockquote>
+<h3 id="pushgateway">PushGateway</h3>
 
-<p>准备 myid 文件：</p>
+<p>由于 Prometheus 数据采集基于 Pull 模型进行设计，因此在网络环境的配置上必须要让 Prometheus Server 能够直接与 Exporter 进行通信。 当这种网络需求无法直接满足时，就可以利用 PushGateway 来进行中转。可以通过PushGateway 将内部网络的监控数据主动 Push 到 Gateway 当中。而 Prometheus Server 则可以采用同样 Pull 的方式从 PushGateway 中获取到监控数据。</p>
 
-<pre><code class="language-bash"># mesos-master1上执行
-echo '1' &gt; /data/zookeeper/data/myid
-
-# mesos-master2上执行
-echo '2' &gt; /data/zookeeper/data/myid
-
-# mesos-master3上执行
-echo '3' &gt; /data/zookeeper/data/myid
-</code></pre>
-
-<p>配置完成后就可以启动 zookeeper 服务了：</p>
-
-<pre><code class="language-bash">$ systemctl start zookeeper.service
-</code></pre>
-
-<blockquote>
-<p>三台机器上均需要启动 zookeeper 服务</p>
-</blockquote>
-
-<h3 id="安装配置-mesos-master-节点">安装配置 Mesos-Master 节点</h3>
-
-<p>在所有 master 机器上执行如下命令安装 mesos 和 marathon：</p>
-
-<pre><code class="language-bash">$ rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-3.noarch.rpm
-$ rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-mesosphere
-$ yum -y install mesos marathon
-</code></pre>
-
-<blockquote>
-<p>有时候安装的 marathon 软件包不是我们需要的，这个是因为我们的 yum 源不对，只需将对应的 yum 源禁用,重新安装即可</p>
-</blockquote>
-
-<p>安装完成的相关软件包如下所示：</p>
-
-<pre><code class="language-bash">$ rpm -qa | grep -E 'mesos|marathon'
-mesos-1.7.0-2.0.3.x86_64
-mesosphere-el-repo-7-3.noarch
-marathon-1.4.13-1.0.683.el7.x86_64
-</code></pre>
-
-<p>安装完成后需要我们配置 mesos ，mesos 的高可用配置是由 zookeeper 实现的，所以需要配置 zookeeper，具体操作如下：</p>
-
-<pre><code class="language-bash"># 在所有 master 上执行
-$ vim /etc/mesos/zk
-zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/mesos
-</code></pre>
-
-<p>设置文件<code>/etc/master-/quorum</code>内容为一个大于（master节点数除以2）的整数。即采用四舍五入，比如这里有3个master节点，那么3/2=1.5，四舍五入为2</p>
-
-<pre><code class="language-bash"># 在所有 master 上执行
-$ echo 2 &gt; /etc/mesos-master/quorum
-</code></pre>
-
-<p>设置 mesos 集群 <code>hostname</code> 和集群名称</p>
-
-<pre><code class="language-bash"># 在 mesos-master1 上执行
-$ echo 172.16.8.120 &gt; /etc/mesos-master/hostname
-$ echo Mesos-Cluster &gt; /etc/mesos-master/cluster
-
-# 在 mesos-master2 上执行
-$ echo 172.16.8.121 &gt; /etc/mesos-master/hostname
-$ echo Mesos-Cluster &gt; /etc/mesos-master/cluster
-
-# 在 mesos-master3 上执行
-$ echo 172.16.8.122 &gt; /etc/mesos-master/hostname
-$ echo Mesos-Cluster &gt; /etc/mesos-master/cluster
-</code></pre>
-
-<p>配置完成后就可以启动 mesos-master 服务了：</p>
-
-<pre><code class="language-bash">$ systemctl start mesos-master
-</code></pre>
-
-<p>服务启动后可以通过浏览器访问 mesos 的界面：<a href="http://172.16.8.120:5050">http://172.16.8.120:5050</a></p>
-
-<h3 id="配置-marathon">配置 Marathon</h3>
-
-<p>在上述安装 mesos 的时候已经安装了 marathon，这里只需配置即可（所有 mesos-master 机器均执行）。</p>
-
-<p>创建 marathon 配置文件目录：</p>
-
-<pre><code class="language-bash"># 在所有master上执行
-$ mkdir -pv /etc/marathon/conf
-
-# 在mesos-master1上执行
-$ echo 172.16.8.120 &gt; /etc/marathon/conf/hostname
-$ cp  /etc/mesos/zk   /etc/marathon/conf/master
-$ cp  /etc/mesos/zk   /etc/marathon/conf/zk
-
-# 修改相关文件
-$ vim /etc/marathon/conf/zk
-zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/marathon
-
-# 在mesos-master2上执行
-$ echo 172.16.8.121 &gt; /etc/marathon/conf/hostname
-$ cp  /etc/mesos/zk   /etc/marathon/conf/master
-$ cp  /etc/mesos/zk   /etc/marathon/conf/zk
-
-# 修改相关文件
-$ vim /etc/marathon/conf/zk
-zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/marathon
-
-# 在mesos-master3上执行
-$ echo 172.16.8.122 &gt; /etc/marathon/conf/hostname
-$ cp  /etc/mesos/zk   /etc/marathon/conf/master
-$ cp  /etc/mesos/zk   /etc/marathon/conf/zk
-
-# 修改相关文件
-$ vim /etc/marathon/conf/zk
-zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/marathon
-</code></pre>
-
-<p>配置完成后就可以起相应的服务了：</p>
-
-<pre><code class="language-bash">$ systemctl start marathon.service
-</code></pre>
-
-<p>marathon 默认监听 8080 端口，也可以通过浏览器访问其界面：<a href="http://172.16.8.120:8080">http://172.16.8.120:8080</a></p>
-
-<h3 id="配置-mesos-slave-节点">配置 Mesos-Slave 节点</h3>
-
-<p>mesos-slave 也需要安装 mesos，不需要安装 marathon，首先引入 mesos 的 yum 源：</p>
-
-<pre><code class="language-bash">$ rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-3.noarch.rpm
-$ rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-mesosphere
-</code></pre>
-
-<p>安装 mesos 软件包：</p>
-
-<pre><code class="language-bash">$ yum -y install mesos
-</code></pre>
-
-<p>安装完成后 mesos-slave 的配置文件默认在 <code>/etc/mesos-slave</code> 目录下，需要自定义配置：</p>
-
-<pre><code class="language-bash">$ echo 172.16.8.110 &gt; /etc/mesos-slave/hostname
-</code></pre>
-
-<p>配置 mesos-master 信息：</p>
-
-<pre><code class="language-bash">$ vim /etc/mesos/zk
-zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/mesos
-</code></pre>
-
-<p>配置 marathon 调用 mesos 运行 docker 容器:</p>
-
-<pre><code class="language-bash">$ echo 'docker,mesos' &gt; /etc/mesos-slave/containerizers
-</code></pre>
-
-<p>配置完成后，启动 mesos-slave 服务</p>
-
-<pre><code class="language-bash">$ systemctl start mesos-slave
-</code></pre>
-
-<p>至此，一个 mesos 集群创建完成，全部安装完成后就可以在 mesos 界面看到加入到的 slave 节点。</p>
+<p>接下来将在 Linux 系统上部署 Prometheus 监控系统，具体过程可以参考后期博文。</p>
 
 
                 
@@ -497,15 +313,10 @@ zk://mesos-master1:2181,mesos-master2:2181,mesos-master3:2181/mesos
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/mesos-cluster-installation-a/" data-toggle="tooltip" data-placement="top" title="Mesos集群二进制方式部署一">&larr;
+                        <a href="/post/consul-cluster-installation-with-containers/" data-toggle="tooltip" data-placement="top" title="容器化部署 Consul 集群">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/mkcert-valid-https-certificates-for-localhost/" data-toggle="tooltip" data-placement="top" title="mkcert:本地有效的https证书">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 
