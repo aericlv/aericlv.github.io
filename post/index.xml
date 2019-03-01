@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 27 Feb 2019 18:59:07 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 01 Mar 2019 10:12:14 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Prometheus 安装和基本配置</title>
+      <link>https://aeric.io/post/prometheus-addons-installation/</link>
+      <pubDate>Fri, 01 Mar 2019 10:12:14 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/prometheus-addons-installation/</guid>
+      <description>Prometheus 是一个开放性的监控解决方案，用户可以非常方便的安装和使用 Prometheus 并且能够非常方便的对其进行扩展。为了能够更加直观的了解 Prometheus Server，接下来我们</description>
+    </item>
     
     <item>
       <title>Prometheus 监控入门介绍</title>

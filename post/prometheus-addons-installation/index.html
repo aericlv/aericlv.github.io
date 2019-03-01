@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="在kubernetes集群中所有的node节点都需要安装网络插件才能让所有的Pod加入到同一个局域网中，本文是安装flannel网络插件的参考文档，具体操作可以参考正文">
+    <meta name="description" content="之前简单介绍了 Prometheus 的工作模式和工作原理，本次主要是通过部署 Prometheus Server 和 node_exporter 并集成 grafana 可视化来更进一步了解 Prometheus 是怎样获取节点监控指标">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes集群配置Flannel服务-吕啸腾的博客</title>
+    <title>Prometheus 安装和基本配置-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-flannel-and-docker-config/">
+    <link rel="canonical" href="/post/prometheus-addons-installation/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx3.sinaimg.cn/large/b258d7f7ly1fxx45xtuqpj21ja0lowu2.jpg')
+        background-image: url('https://wx3.sinaimg.cn/large/b258d7f7ly1g0maj74zkkj21ja0loqmw.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,16 +143,12 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/kubernetes" title="Kubernetes">
-                            Kubernetes
-                        </a>
-                        
-                        <a class="tag" href="/tags/docker" title="Docker">
-                            Docker
+                        <a class="tag" href="/tags/prometheus" title="Prometheus">
+                            Prometheus
                         </a>
                         
                     </div>
-                    <h1>Kubernetes集群配置Flannel服务</h1>
+                    <h1>Prometheus 安装和基本配置</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -160,7 +156,7 @@
 			         Aeric
 			 
 			on 
-			Friday, November 30, 2018
+			Friday, March 1, 2019
                         
                     </span>
                 </div>
@@ -190,192 +186,228 @@
 <ul>
 <li>
 <ul>
-<li>
-<ul>
-<li><a href="#配置-flannel-服务">配置 Flannel 服务</a></li>
-<li><a href="#配置-docker-服务">配置 docker 服务</a></li>
-<li><a href="#查询-etcd-中的内容">查询 etcd 中的内容</a></li>
-</ul></li>
+<li><a href="#安装配置-prometheus-server">安装配置 Prometheus Server</a></li>
+<li><a href="#安装配置-node-exporter">安装配置 node_exporter</a></li>
+<li><a href="#安装-grafana-展示工具">安装 Grafana 展示工具</a></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p><strong>检查 TLS 证书</strong></p>
+<p>Prometheus 是一个开放性的监控解决方案，用户可以非常方便的安装和使用 Prometheus 并且能够非常方便的对其进行扩展。为了能够更加直观的了解 Prometheus Server，接下来我们将在本地部署并运行一个 Prometheus Server实例，通过 Node Exporter 采集当前主机的系统资源使用情况。 并通过 Grafana 创建一个简单的可视化仪表盘。</p>
 
-<pre><code class="language-bash">[root@ceph-node1 ~]# ls /etc/kubernetes/ssl/
-admin-key.pem  admin.pem  ca-key.pem  ca.pem  kube-proxy-key.pem  kube-proxy.pem  kubernetes-key.pem  kubernetes.pem
+<p>Prometheus 基于 Golang 编写，编译后的软件包，不依赖于任何的第三方依赖。用户只需要下载对应平台的二进制包，解压并且添加基本的配置即可正常启动 Prometheus Server。具体安装过程可以参考如下内容。</p>
+
+<h2 id="安装配置-prometheus-server">安装配置 Prometheus Server</h2>
+
+<p>本次我们选择在 CentOS7 上安装 prometheus ,其他系统安装过程类似，这里不再一一赘述。</p>
+
+<p>系统环境如下：</p>
+
+<pre><code class="language-bash">$ cat /etc/redhat-release
+CentOS Linux release 7.5.1804 (Core)
+$ uname -r
+3.10.0-862.el7.x86_64
 </code></pre>
 
-<h3 id="配置-flannel-服务">配置 Flannel 服务</h3>
+<p>为了安全，我们这里不用 root 用户启动相关服务，而是用我们自建的 prometheus 用户启动服务，首先需要创建一个用户:</p>
 
-<p>建议直接使用 yum 安装 flanneld，除非对版本有特殊需求，默认安装的是 <code>v0.7.1</code> 版本的 flannel。</p>
-
-<p>安装 flanneld 服务，具体参考如下：</p>
-
-<pre><code class="language-bash">yum -y install flannel
-systemctl start flanneld.service
+<pre><code class="language-bash">$ groupadd prometheus
+$ useradd -g prometheus -M -s /sbin/nologin prometheus
 </code></pre>
 
-<blockquote>
-<p>在起 flanneld 服务之前，我们需要修改 flanneld服务的 Systemd Unit 文件和对应的配置文件</p>
-</blockquote>
+<p>我们需要从 <a href="https://github.com/prometheus/prometheus/releases">prometheus下载页</a> 下载我们需要安装的版本，这里我们选择则安装的 prometheus 版本是 v2.7.1 的最新版本。</p>
 
-<p><strong>修改 flannel 服务的 systemd unit 文件</strong></p>
-
-<pre><code class="language-bash">cat /usr/lib/systemd/system/flanneld.service
+<pre><code class="language-bash">$ wget https://github.com/prometheus/prometheus/releases/download/v2.7.1/prometheus-2.7.1.linux-amd64.tar.gz
 </code></pre>
 
-<p>具体内容如下：</p>
+<p>解压并安装 prometheus 服务：</p>
+
+<pre><code class="language-bash">$ tar xf prometheus-2.7.1.linux-amd64.tar.gz -C /srv/
+$ cd /srv/
+$ mv prometheus-2.7.1.linux-amd64/ prometheus
+$ mkdir -pv /srv/prometheus/data
+$ chown -R prometheus.prometheus /srv/prometheus
+</code></pre>
+
+<p>创建 prometheus 系统服务启动文件 <code>/usr/lib/systemd/system/prometheus.service</code>：</p>
 
 <pre><code class="language-bash">[Unit]
-Description=Flanneld overlay address etcd agent
-After=network.target
+Description=Prometheus Server
+Documentation=https://prometheus.io/docs/introduction/overview/
 After=network-online.target
-Wants=network-online.target
-After=etcd.service
-Before=docker.service
 
 [Service]
-Type=notify
-EnvironmentFile=/etc/sysconfig/flanneld
-EnvironmentFile=-/etc/sysconfig/docker-network
-ExecStart=/usr/bin/flanneld-start \
-    $FLANNEL_OPTIONS \
-    -etcd-endpoints=${FLANNEL_ETCD_ENDPOINTS} \
-    -etcd-prefix=${FLANNEL_ETCD_PREFIX}
-ExecStartPost=/usr/libexec/flannel/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d /run/flannel/docker
+User=prometheus
 Restart=on-failure
-
+ExecStart=/srv/prometheus/prometheus \
+  --config.file=/srv/prometheus/prometheus.yml \
+  --storage.tsdb.path=/srv/prometheus/data
+ExecReload=/bin/kill -HUP $MAINPID
 [Install]
 WantedBy=multi-user.target
-RequiredBy=docker.service
 </code></pre>
 
-<p>完整 flanneld systemd unit 参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/systemd/flanneld.service">flanneld.service</a></p>
+<p>完整 prometheus 系统服务启动文件参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/service/prometheus.service">prometheus.service</a></p>
 
-<p><strong>修改 flannel 服务配置文件</strong></p>
+<p>修改 prometheus 配置文件 <code>/srv/prometheus/prometheus.yml</code>：</p>
 
-<p>flannel 服务配置文件: <code>/etc/sysconfig/flanneld</code></p>
+<pre><code class="language-bash">[root@node01 ~]# grep -v '^#' /srv/prometheus/prometheus.yml
+global:
+  scrape_interval:     15s 
+  evaluation_interval: 15s 
 
-<pre><code class="language-bash"># Flanneld configuration options  
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: [&quot;localhost:9093&quot;]
 
-# etcd url location.  Point this to the server where etcd runs
-#FLANNEL_ETCD_ENDPOINTS=&quot;http://127.0.0.1:2379&quot;
-FLANNEL_ETCD_ENDPOINTS=&quot;https://192.168.8.66:2379,https://192.168.8.67:2379,https://192.168.8.68:2379&quot;
+rule_files:
+  #- &quot;alert.rules&quot;
+  
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval:     5s
+    static_configs:
+      - targets: ['localhost:9090']
 
-# etcd config key.  This is the configuration key that flannel queries
-# For address range assignment
-#FLANNEL_ETCD_PREFIX=&quot;/atomic.io/network&quot;
-FLANNEL_ETCD_PREFIX=&quot;/kube-centos/network&quot;
-
-# Any additional options that you want to pass
-#FLANNEL_OPTIONS=&quot;&quot;
-FLANNEL_OPTIONS=&quot;-etcd-cafile=/etc/kubernetes/ssl/ca.pem -etcd-certfile=/etc/kubernetes/ssl/kubernetes.pem -etcd-keyfile=/etc/kubernetes/ssl/kubernetes-key.pem&quot;
-</code></pre>
-
-<p>完整 flannel 服务配置文件参见： <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/config/flanneld">flanneld</a></p>
-
-<blockquote>
-<p>flannel 服务的 systemd unit 文件及配置文件修改完成后，就可以启动 flanneld 服务了。</p>
-</blockquote>
-
-<pre><code class="language-bash">systemctl daemon-reload
-systemctl start flanneld.service
-</code></pre>
-
-<p><strong>在 etcd 中创建网络配置</strong></p>
-
-<p>执行下面的命令为docker分配IP地址段:</p>
-
-<pre><code class="language-bash">etcdctl --endpoints=https://192.168.8.66:2379,https://192.168.8.67:2379,https://192.168.8.68:2379 \
-  --ca-file=/etc/kubernetes/ssl/ca.pem \
-  --cert-file=/etc/kubernetes/ssl/kubernetes.pem \
-  --key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
-  mkdir /kube-centos/network
-
-etcdctl --endpoints=https://192.168.8.66:2379,https://192.168.8.67:2379,https://192.168.8.68:2379 \
-  --ca-file=/etc/kubernetes/ssl/ca.pem \
-  --cert-file=/etc/kubernetes/ssl/kubernetes.pem \
-  --key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
-  mk /kube-centos/network/config '{&quot;Network&quot;:&quot;172.30.0.0/16&quot;,&quot;SubnetLen&quot;:24,&quot;Backend&quot;:{&quot;Type&quot;:&quot;vxlan&quot;}}'
-</code></pre>
-
-<h3 id="配置-docker-服务">配置 docker 服务</h3>
-
-<p>docker 需要和 flannel 服务在同一个网段内，这样后期才能互通。</p>
-
-<p>docker 服务的安装直接用 yum 包管理工具直接安装即可：</p>
-
-<pre><code class="language-bash">yum -y install docker
-</code></pre>
-
-<p>配置 docker 服务如下：</p>
-
-<pre><code class="language-bash">systemctl stop docker.service
-source  /run/flannel/subnet.env 
-docker  daemon  --bip=${FLANNEL_SUBNET}  --mtu=${FLANNEL_MTU} &amp;
-ifconfig docker0 $FLANNEL_SUBNET
-</code></pre>
-
-<p>修改docker服务文件增加如下内容：</p>
-
-<pre><code class="language-bash">EnvironmentFile=-/run/flannel/docker 
-EnvironmentFile=-/run/docker_opts.env 
-EnvironmentFile=-/run/flannel/subnet.env
-</code></pre>
-
-<p>配置完成后需要重启 docker 及 flannel 服务。</p>
-
-<pre><code class="language-bash">systemctl daemon-reload
-systemctl restart docker.service
-systemctl restart flanneld.service
+  - job_name: 'node'
+    scrape_interval:     10s
+    static_configs:
+      - targets: ['localhost:9100']
 </code></pre>
 
 <blockquote>
-<p>我们在重启 docker 服务的时候可能重启失败，原因一般是 docker 进程还存在，将其杀死再重启既可，可以参考：<code>ps axf | grep docker | grep -v grep | awk '{print &quot;kill -9 &quot; $1}' | sudo sh</code></p>
+<p>该配置文件比较完整，该节点安装了 node_exporter 以及 alertmanager 服务，可以先按照此配置文件做配置，不影响服务的启动过程</p>
 </blockquote>
 
-<h3 id="查询-etcd-中的内容">查询 etcd 中的内容</h3>
+<p>完整 prometheus 配置文件可以参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/config/prometheus/prometheus.yml">prometheus.yml</a></p>
 
-<p>docker 和 flannel 服务启动正常后，我们可以参照下面的方式查看 etcd 的内容：</p>
+<p>启动服务：</p>
 
-<pre><code class="language-bash">[root@k8s-master ~]# etcdctl --endpoints=${ETCD_ENDPOINTS} \
-    --ca-file=/etc/kubernetes/ssl/ca.pem \
-    --cert-file=/etc/kubernetes/ssl/kubernetes.pem \
-    --key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
-    ls /kube-centos/network/subnets
-/kube-centos/network/subnets/172.30.78.0-24
-/kube-centos/network/subnets/172.30.79.0-24
-/kube-centos/network/subnets/172.30.41.0-24
+<pre><code class="language-bash">$ systemctl daemon-reload
+$ systemctl start prometheus.service
+$ systemctl enable prometheus.service
+$ systemctl status prometheus.service
+</code></pre>
+
+<p>Prometheus 服务支持热加载配置：</p>
+
+<pre><code class="language-bash">$ systemctl reload prometheus.service
+</code></pre>
+
+<p>Prometheus 服务启动完成后，可以通过<a href="http://localhost:9090/">http://localhost:9090</a>访问 Prometheus 的 UI 界面。</p>
+
+<h2 id="安装配置-node-exporter">安装配置 node_exporter</h2>
+
+<p>为监控服务器 CPU , 内存 , 磁盘 , I/O 等信息，需要在被监控机器上安装 node_exporter 服务。</p>
+
+<p>首先我们需要从 <a href="https://github.com/prometheus/node_exporter/releases">node_exporter下载页</a> 下载我们需要安装的版本，这里我们选择则安装的 node_exporter 版本是v0.17.0 的最新版本。</p>
+
+<pre><code class="language-bash">$ wget https://github.com/prometheus/node_exporter/releases/download/v0.17.0/node_exporter-0.17.0.linux-amd64.tar.gz
+</code></pre>
+
+<p>解压并安装 node_exporter 服务：</p>
+
+<pre><code class="language-bash">$ tar xf /opt/soft/node_exporter-0.17.0.linux-amd64.tar.gz -C /srv/
+$ cd /srv/
+$ mv node_exporter-0.17.0.linux-amd64/ node_exporter
+$ chown -R prometheus.prometheus /srv/node_exporter
+</code></pre>
+
+<p>创建 node_exporter 系统服务启动文件 <code>/usr/lib/systemd/system/node_exporter.service</code></p>
+
+<pre><code class="language-bash">#Prometheus Node Exporter Upstart script
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+ExecStart=/srv/node_exporter/node_exporter
+
+[Install]
+WantedBy=default.target
+</code></pre>
+
+<p>完整 node_exporter 系统服务启动文件参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/service/node_exporter.service">node_exporter.service</a></p>
+
+<p>启动 node_exporter 服务：</p>
+
+<pre><code class="language-bash">$ systemctl daemon-reload
+$ systemctl enable node_exporter
+$ systemctl start node_exporter
+$ systemctl status node_exporter
+</code></pre>
+
+<p>服务启动后可以用 <a href="http://localhost:9100/metrics">http://localhost:9100/metrics</a> 测试 node_exporter 是否获取到节点的监控指标。</p>
+
+<p>如果可以正常获取到节点的指标后，我们可以将 node_exporter 整合到 prometheus 中，具体如下：</p>
+
+<p>修改 prometheus 的配置文件<code>/srv/prometheus/prometheus.yml</code>，增加如下内容：</p>
+
+<pre><code class="language-bash">scrape_configs:
+...
+- job_name: 'node'
+    scrape_interval:     10s
+    static_configs:
+      - targets: ['localhost:9100']
 </code></pre>
 
 <blockquote>
-<p>其实 flanneld 和 docker 服务在 master 节点上是非必需的，但是我们建议在 master 节点上同样配置 flanneld 和 docker 服务，因为这样可以很方便的通过 master 节点访问 node 上的服务，例如插件 dashboard 的访问，我们可以通过 api-server 来访问：<a href="http://master-ip:8080/ui">http://master-ip:8080/ui</a>。</p>
+<p>之前的 prometheus 配置文件已经做过修改了，这里只是提及一下</p>
 </blockquote>
 
-<p>master 节点的 flanneld 和 docker 服务安装好后，我们在 master 节点可以 ping 通 nodes 节点的 flanneld 地址，例如：</p>
+<p>重启 Prometheus 服务：</p>
 
-<pre><code class="language-bash">[root@k8s-master ~]# ping 172.30.41.0
-PING 172.30.41.0 (172.30.41.0) 56(84) bytes of data.
-64 bytes from 172.30.41.0: icmp_seq=1 ttl=64 time=0.081 ms
-^C
---- 172.30.41.0 ping statistics ---
-1 packets transmitted, 1 received, 0% packet loss, time 0ms
-rtt min/avg/max/mdev = 0.081/0.081/0.081/0.000 ms
-
-[root@k8s-master ~]# ping 172.30.78.0
-PING 172.30.78.0 (172.30.78.0) 56(84) bytes of data.
-64 bytes from 172.30.78.0: icmp_seq=1 ttl=64 time=0.648 ms
-^C
---- 172.30.78.0 ping statistics ---
-1 packets transmitted, 1 received, 0% packet loss, time 0ms
-rtt min/avg/max/mdev = 0.648/0.648/0.648/0.000 ms
-[root@k8s-master ~]# ping 172.30.79.0
-PING 172.30.79.0 (172.30.79.0) 56(84) bytes of data.
-64 bytes from 172.30.79.0: icmp_seq=1 ttl=64 time=0.658 ms
+<pre><code class="language-bash">$ systemctl reload prometheus.service
 </code></pre>
+
+<p>之后就可以通过 Prometheus 服务获取该主机的相关资源了</p>
+
+<h2 id="安装-grafana-展示工具">安装 Grafana 展示工具</h2>
+
+<p>Grafana 我们主要用它来展示 Prometheus 的监控指标的，这样可以直观查看各节点或者服务的状态，本次安装 grafana 我们直接用 yum 安装即可，具体操作也可以参考<a href="http://docs.grafana.org/installation/rpm/">官方文档</a></p>
+
+<p>首先，需要准备 grafana 的 repo 源，手动添加 <code>/etc/yum.repos.d/grafana.repo</code>文件：</p>
+
+<pre><code class="language-bash">[grafana]
+name=grafana
+baseurl=https://packages.grafana.com/oss/rpm
+repo_gpgcheck=1
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.grafana.com/gpg.key
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+</code></pre>
+
+<p>然后就可以用 yum 安装 grafana 了：</p>
+
+<pre><code class="language-bash">$ yum makecache
+$ yum -y install grafana
+</code></pre>
+
+<p>等待安装完成后就可以启动服务了：</p>
+
+<pre><code class="language-bash">$ service grafana-server start
+</code></pre>
+
+<p>服务启动后 grafana 默认监听在 3000 端口 ，可以通过 <code>http://localhost:3000</code> 访问 grafana 的 ui 界面，默认登录账号密码为 <code>admin/admin</code> ，第一次登录需要我们重置密码。</p>
+
+<p>当 grafana 的页面可以正常访问后，我们就可以添加数据源了，具体操作流程如下：</p>
+
+<p>&ldquo;Configration&rdquo;&mdash;&ldquo;Data Sources&rdquo; 然后可以按照下图所示进行配置，需要注意的是 prometheus 的地址需要根据实际情况做修改。</p>
+
+<p><img src="https://wx4.sinaimg.cn/large/b258d7f7ly1g0nc7qknkvj20i90nrdj6.jpg" alt="grafana 设置数据源" /></p>
+
+<p>grafana 的数据源配置完成后，可以导入一个 dashboard 模板文件，建议节点模板使用 <a href="https://grafana.com/dashboards/8919">node_exporter 展示面板模板</a></p>
+
+<p>导入成功后完整的监控面板如下所示：</p>
+
+<p><img src="https://wx4.sinaimg.cn/large/b258d7f7ly1g0nclvl010j21ef0o7ai3.jpg" alt="node_exporter 监控面板" /></p>
 
 
                 
@@ -424,15 +456,10 @@ PING 172.30.79.0 (172.30.79.0) 56(84) bytes of data.
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/k8s-master-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群部署Master节点服务">&larr;
+                        <a href="/post/prometheus-introduction/" data-toggle="tooltip" data-placement="top" title="Prometheus 监控入门介绍">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/k8s-nodes-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群部署Node节点服务">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 
