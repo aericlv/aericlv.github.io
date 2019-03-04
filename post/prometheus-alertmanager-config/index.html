@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="之前简单介绍了 Prometheus 的工作模式和工作原理，本次主要是通过部署 Prometheus Server 和 node_exporter 并集成 grafana 可视化来更进一步了解 Prometheus 是怎样获取节点监控指标">
+    <meta name="description" content="Alertmanager 作为一个独立的组件，负责接收并处理来自 Prometheus Server 的告警信息,本次我们主要介绍如何安装 Alertmanager 并且测试 Email、wechat 和 slack 等告警方式">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Prometheus 安装和基本配置-吕啸腾的博客</title>
+    <title>Prometheus Alertmanager 基本配置-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/prometheus-addons-installation/">
+    <link rel="canonical" href="/post/prometheus-alertmanager-config/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx3.sinaimg.cn/large/b258d7f7ly1g0maj74zkkj21ja0loqmw.jpg')
+        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1g0ngh3n88tj21ja0lo7dk.jpg')
     }
 </style>
 <header class="intro-header">
@@ -148,7 +148,7 @@
                         </a>
                         
                     </div>
-                    <h1>Prometheus 安装和基本配置</h1>
+                    <h1>Prometheus Alertmanager 基本配置</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -186,228 +186,282 @@
 <ul>
 <li>
 <ul>
-<li><a href="#安装配置-prometheus-server">安装配置 Prometheus Server</a></li>
-<li><a href="#安装配置-node-exporter">安装配置 node_exporter</a></li>
-<li><a href="#安装-grafana-展示工具">安装 Grafana 展示工具</a></li>
+<li><a href="#安装配置-alertmanager">安装配置 Alertmanager</a></li>
+<li><a href="#alertmanager-集成邮件告警">Alertmanager 集成邮件告警</a></li>
+<li><a href="#alertmanager-集成企业微信告警">Alertmanager 集成企业微信告警</a></li>
+<li><a href="#alertmanager-集成-slack-告警">Alertmanager 集成 Slack 告警</a></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p>Prometheus 是一个开放性的监控解决方案，用户可以非常方便的安装和使用 Prometheus 并且能够非常方便的对其进行扩展。为了能够更加直观的了解 Prometheus Server，接下来我们将在本地部署并运行一个 Prometheus Server实例，通过 Node Exporter 采集当前主机的系统资源使用情况。 并通过 Grafana 创建一个简单的可视化仪表盘。</p>
+<p>在 Prometheus Server 中支持基于 PromQL 创建告警规则，如果满足 PromQL 定义的规则，则会产生一条告警，而告警的后续处理流程则由 AlertManager 进行管理。在 AlertManager 中我们可以与邮件，Slack 等等内置的通知方式进行集成，也可以通过 Webhook 自定义告警处理方式。AlertManager 即 Prometheus 体系中的告警处理中心。</p>
 
-<p>Prometheus 基于 Golang 编写，编译后的软件包，不依赖于任何的第三方依赖。用户只需要下载对应平台的二进制包，解压并且添加基本的配置即可正常启动 Prometheus Server。具体安装过程可以参考如下内容。</p>
+<h2 id="安装配置-alertmanager">安装配置 Alertmanager</h2>
 
-<h2 id="安装配置-prometheus-server">安装配置 Prometheus Server</h2>
+<p>告警能力在 Prometheus 的架构中被划分成两个独立的部分。如下所示，通过在 Prometheus 中定义 AlertRule（告警规则），Prometheus 会周期性的对告警规则进行计算，如果满足告警触发条件就会向 Alertmanager 发送告警信息。</p>
 
-<p>本次我们选择在 CentOS7 上安装 prometheus ,其他系统安装过程类似，这里不再一一赘述。</p>
+<p><img src="https://ws1.sinaimg.cn/large/006tKfTcly1g0e112xcb9j31io0g276b.jpg" alt="prometheus告警图" /></p>
 
-<p>系统环境如下：</p>
+<p>首先我们需要从<a href="https://github.com/prometheus/alertmanager/releases">Alertmanager下载页</a>下载我们需要安装的版本，这里我们选择则安装的prometheus版本是 v0.16.1的最新版本。</p>
 
-<pre><code class="language-bash">$ cat /etc/redhat-release
-CentOS Linux release 7.5.1804 (Core)
-$ uname -r
-3.10.0-862.el7.x86_64
+<pre><code class="language-bash">$ wget https://github.com/prometheus/alertmanager/releases/download/v0.16.1/alertmanager-0.16.1.linux-amd64.tar.gz
 </code></pre>
 
-<p>为了安全，我们这里不用 root 用户启动相关服务，而是用我们自建的 prometheus 用户启动服务，首先需要创建一个用户:</p>
+<p>解压并安装 alertmanager 服务：</p>
 
-<pre><code class="language-bash">$ groupadd prometheus
-$ useradd -g prometheus -M -s /sbin/nologin prometheus
-</code></pre>
-
-<p>我们需要从 <a href="https://github.com/prometheus/prometheus/releases">prometheus下载页</a> 下载我们需要安装的版本，这里我们选择则安装的 prometheus 版本是 v2.7.1 的最新版本。</p>
-
-<pre><code class="language-bash">$ wget https://github.com/prometheus/prometheus/releases/download/v2.7.1/prometheus-2.7.1.linux-amd64.tar.gz
-</code></pre>
-
-<p>解压并安装 prometheus 服务：</p>
-
-<pre><code class="language-bash">$ tar xf prometheus-2.7.1.linux-amd64.tar.gz -C /srv/
+<pre><code class="language-bash">$ tar xf alertmanager-0.16.1.linux-amd64.tar.gz -C /srv/
 $ cd /srv/
-$ mv prometheus-2.7.1.linux-amd64/ prometheus
-$ mkdir -pv /srv/prometheus/data
-$ chown -R prometheus.prometheus /srv/prometheus
+$ mv alertmanager-0.16.1.linux-amd64/ alertmanager
+$ mkdir -pv /srv/alertmanager/data
+$ chown -R prometheus.prometheus /srv/alertmanager
 </code></pre>
 
-<p>创建 prometheus 系统服务启动文件 <code>/usr/lib/systemd/system/prometheus.service</code>：</p>
+<p>创建 alertmanager 系统服务启动文件: <code>/usr/lib/systemd/system/alertmanager.service</code></p>
 
 <pre><code class="language-bash">[Unit]
-Description=Prometheus Server
-Documentation=https://prometheus.io/docs/introduction/overview/
-After=network-online.target
+Description=Alertmanager
+After=network.target
 
 [Service]
+Type=simple
 User=prometheus
+ExecStart=/srv/alertmanager/alertmanager \
+  --config.file=/srv/alertmanager/alertmanager.yml \
+  --storage.path=/srv/alertmanager/data
 Restart=on-failure
-ExecStart=/srv/prometheus/prometheus \
-  --config.file=/srv/prometheus/prometheus.yml \
-  --storage.tsdb.path=/srv/prometheus/data
-ExecReload=/bin/kill -HUP $MAINPID
+
 [Install]
 WantedBy=multi-user.target
 </code></pre>
 
-<p>完整 prometheus 系统服务启动文件参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/service/prometheus.service">prometheus.service</a></p>
+<p>完整服务启动文件参见<a href="https://github.com/yeaheo/prometheus-huang/blob/master/service/alertmanager.service">alertmanager.service</a></p>
 
-<p>修改 prometheus 配置文件 <code>/srv/prometheus/prometheus.yml</code>：</p>
+<p>准备 alertmanager 配置文件：<code>/srv/alertmanager/alertmanager.yml</code></p>
 
-<pre><code class="language-bash">[root@node01 ~]# grep -v '^#' /srv/prometheus/prometheus.yml
-global:
-  scrape_interval:     15s 
-  evaluation_interval: 15s 
+<pre><code class="language-bash">global:
+  smtp_smarthost: 'smtp.163.com:25'
+  smtp_from: 'xx@163.com'
+  smtp_auth_username: 'xx@163.com'
+  smtp_auth_password: 'xx'
+  smtp_require_tls: false
 
+templates:
+  - '/srv/alertmanager/template/*.tmpl'
+
+route:
+  group_by: ['alertname','cluster','service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 10m
+  receiver: 'default-receiver'
+
+receivers:
+- name: 'default-receiver'
+  email_configs:
+  - to: 'xx@qq.com'
+    html: '{{ template &quot;alert.html&quot; . }}'
+    headers: { Subject: &quot;Prometheus 告警测试邮件&quot; }
+</code></pre>
+
+<blockquote>
+<p>该文件只是一个邮件报警的示例文件，不影响正常业务的使用，如果需要对业务进行调整可以根据实际情况做修改</p>
+</blockquote>
+
+<p>完整 Alertmanager 配置文件参见<a href="https://github.com/yeaheo/prometheus-huang/blob/master/config/alertmanager/alertmanager.yml">alertmanager.yml</a></p>
+
+<p>启动 alertmanager 服务：</p>
+
+<pre><code class="language-bash">$ systemctl daemon-reload
+$ systemctl enable alertmanager.service
+$ systemctl start alertmanager.service
+$ systemctl status alertmanager.service
+</code></pre>
+
+<p>安装完成后可以访问 alertmanager 的UI界面：<a href="http://localhost:9030">http://localhost:9030</a></p>
+
+<p>配置 Prometheus 集成 Alertmanager，需要修改 prometheus 的配置文件，增加 Alertmanager 的相关配置，具体内容如下所示：</p>
+
+<pre><code class="language-bash">...
 alerting:
   alertmanagers:
   - static_configs:
     - targets: [&quot;localhost:9093&quot;]
-
-rule_files:
-  #- &quot;alert.rules&quot;
-  
-scrape_configs:
-  - job_name: 'prometheus'
-    scrape_interval:     5s
-    static_configs:
-      - targets: ['localhost:9090']
-
-  - job_name: 'node'
-    scrape_interval:     10s
-    static_configs:
-      - targets: ['localhost:9100']
-</code></pre>
-
-<blockquote>
-<p>该配置文件比较完整，该节点安装了 node_exporter 以及 alertmanager 服务，可以先按照此配置文件做配置，不影响服务的启动过程</p>
-</blockquote>
-
-<p>完整 prometheus 配置文件可以参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/config/prometheus/prometheus.yml">prometheus.yml</a></p>
-
-<p>启动服务：</p>
-
-<pre><code class="language-bash">$ systemctl daemon-reload
-$ systemctl start prometheus.service
-$ systemctl enable prometheus.service
-$ systemctl status prometheus.service
-</code></pre>
-
-<p>Prometheus 服务支持热加载配置：</p>
-
-<pre><code class="language-bash">$ systemctl reload prometheus.service
-</code></pre>
-
-<p>Prometheus 服务启动完成后，可以通过<a href="http://localhost:9090/">http://localhost:9090</a>访问 Prometheus 的 UI 界面。</p>
-
-<h2 id="安装配置-node-exporter">安装配置 node_exporter</h2>
-
-<p>为监控服务器 CPU , 内存 , 磁盘 , I/O 等信息，需要在被监控机器上安装 node_exporter 服务。</p>
-
-<p>首先我们需要从 <a href="https://github.com/prometheus/node_exporter/releases">node_exporter下载页</a> 下载我们需要安装的版本，这里我们选择则安装的 node_exporter 版本是v0.17.0 的最新版本。</p>
-
-<pre><code class="language-bash">$ wget https://github.com/prometheus/node_exporter/releases/download/v0.17.0/node_exporter-0.17.0.linux-amd64.tar.gz
-</code></pre>
-
-<p>解压并安装 node_exporter 服务：</p>
-
-<pre><code class="language-bash">$ tar xf /opt/soft/node_exporter-0.17.0.linux-amd64.tar.gz -C /srv/
-$ cd /srv/
-$ mv node_exporter-0.17.0.linux-amd64/ node_exporter
-$ chown -R prometheus.prometheus /srv/node_exporter
-</code></pre>
-
-<p>创建 node_exporter 系统服务启动文件 <code>/usr/lib/systemd/system/node_exporter.service</code></p>
-
-<pre><code class="language-bash">#Prometheus Node Exporter Upstart script
-[Unit]
-Description=Node Exporter
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-User=prometheus
-ExecStart=/srv/node_exporter/node_exporter
-
-[Install]
-WantedBy=default.target
-</code></pre>
-
-<p>完整 node_exporter 系统服务启动文件参见：<a href="https://github.com/yeaheo/prometheus-huang/blob/master/service/node_exporter.service">node_exporter.service</a></p>
-
-<p>启动 node_exporter 服务：</p>
-
-<pre><code class="language-bash">$ systemctl daemon-reload
-$ systemctl enable node_exporter
-$ systemctl start node_exporter
-$ systemctl status node_exporter
-</code></pre>
-
-<p>服务启动后可以用 <a href="http://localhost:9100/metrics">http://localhost:9100/metrics</a> 测试 node_exporter 是否获取到节点的监控指标。</p>
-
-<p>如果可以正常获取到节点的指标后，我们可以将 node_exporter 整合到 prometheus 中，具体如下：</p>
-
-<p>修改 prometheus 的配置文件<code>/srv/prometheus/prometheus.yml</code>，增加如下内容：</p>
-
-<pre><code class="language-bash">scrape_configs:
 ...
-- job_name: 'node'
-    scrape_interval:     10s
-    static_configs:
-      - targets: ['localhost:9100']
 </code></pre>
+
+<p>修改完成后重启 prometheus 服务即可。</p>
+
+<h2 id="alertmanager-集成邮件告警">Alertmanager 集成邮件告警</h2>
+
+<p>Alertmanager 集成邮件告警首先需要准备好邮件的相关模板，这里我们选择用<a href="https://github.com/prometheus/alertmanager/blob/master/template/default.tmpl">官方默认的模板</a>,直接下载下来就能使用，不用做任何的修改。因为之前我们在配置 Alertmanager 的时候配置了模板的具体存放位置，这里直接将该模板下载到此目录下即可,目录不存在需要手动创建该目录：</p>
+
+<pre><code class="language-bash">$ mkdir -pv /srv/alertmanager/template/
+$ cd /srv/alertmanager/template/
+$ wget https://raw.githubusercontent.com/prometheus/alertmanager/master/template/default.tmpl
+$ chown -R prometheus.prometheus /srv/alertmanager
+</code></pre>
+
+<p>之前 Alertmanager 的配置文件中已经贴出了针对邮件的相关配置，具体如下：</p>
+
+<pre><code class="language-bash">global:
+  smtp_smarthost: 'smtp.163.com:25'
+  smtp_from: 'xx@163.com'
+  smtp_auth_username: 'xx@163.com'
+  smtp_auth_password: 'xx'
+  smtp_require_tls: false
+
+templates:
+  - '/srv/alertmanager/template/*.tmpl'
+
+route:
+  group_by: ['alertname','cluster','service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 10m
+  receiver: 'default-receiver'
+  
+receivers:
+- name: 'default-receiver'
+  email_configs:
+  - to: 'xx@qq.com'
+    html: '{{ template &quot;alert.html&quot; . }}'
+    headers: { Subject: &quot;Prometheus 告警测试邮件&quot; }
+</code></pre>
+
+<p>配置文件准备好后，还需要创建报警规则文件，这个是在 prometheus 里配置的，例如我们写一个关于 node_exporter 的告警规则，如下：</p>
+
+<pre><code class="language-bash">groups:
+- name: hostStatsAlert
+  rules:
+  - alert: InstanceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: page
+    annotations:
+      summary: &quot;Instance {{$labels.instance}} down&quot;
+      description: &quot;{{$labels.instance}} of job {{$labels.job}} has been down for more than 5 minutes.&quot;
+</code></pre>
+
+<p>同时我们还是可以自定义告警规则的，我这里有几个关于主机相关指标的告警规则，可以参见<a href="https://github.com/yeaheo/prometheus-huang/blob/master/alert-rules/node-stats-alert.rules">node-stats-alert.rules</a>，告警规则准备好后需要在 prometheus 里指定规则相关文件，如下所示（只做参考）：</p>
+
+<pre><code class="language-bash">rule_files:
+  - &quot;alert.rules&quot;
+</code></pre>
+
+<p>配置文件修改完成后，需要重新启动 alertmanager 和 prometheus 服务，之后就可以尝试停掉 node_exporter 服务查看是否可以实现邮件告警。</p>
+
+<h2 id="alertmanager-集成企业微信告警">Alertmanager 集成企业微信告警</h2>
+
+<p>Alertmanager 的企业微信告警和邮件告警配置类似，在配置微信告警前需要准备一个微信企业号，创建自己的告警应用，并准备一些参数，配置企业微信告警需要准备的参数具体如下：</p>
+
+<pre><code class="language-bash">wechat_api_url: 'https://qyapi.weixin.qq.com/cgi-bin/'(默认)
+to_party: '部门id'
+agent_id: '应用id'
+corp_id: '维信企业号ID'
+api_secret: '自己创建应用的 secret'
+</code></pre>
+
+<p>准备维信告警模板：</p>
+
+<pre><code class="language-bash">{{ define &quot;wechat.default.message&quot; }}
+{{ if gt (len .Alerts.Firing) 0 -}}
+Alerts Firing:
+{{ range .Alerts}}
+告警级别: {{ .Labels.severity }}
+告警类型: {{ .Labels.alertname }}
+故障主机: {{ .Labels.instance }}
+告警主题: {{ .Annotations.summary }}
+告警详情: {{ .Annotations.description }}
+触发时间: {{ .StartsAt.Format &quot;2006-01-02 15:04:05&quot; }}
+{{- end }}
+{{- end }}
+{{ if gt (len .Alerts.Resolved) 0 -}}
+Alerts Resolved:
+{{ range .Alerts}}
+告警级别: {{ .Labels.severity }}
+告警类型: {{ .Labels.alertname }}
+故障主机: {{ .Labels.instance }}
+告警主题: {{ .Annotations.summary }}
+触发时间: {{ .StartsAt.Format &quot;2006-01-02 15:04:05&quot; }}
+恢复时间: {{ .EndsAt.Format &quot;2006-01-02 15:04:05&quot; }}
+{{- end }}
+{{- end }}
+{{- end }}
+</code></pre>
+
+<p>具体模板文件参见<a href="https://github.com/yeaheo/prometheus-huang/blob/master/alertmanager-tmpl/wechat.tmpl">wechat.tmpl</a></p>
 
 <blockquote>
-<p>之前的 prometheus 配置文件已经做过修改了，这里只是提及一下</p>
+<p>需要说明的是之前下载的官方模板文件已经包含了微信企业的相关配置，但是输出信息不是很友好，建议按照上面的内容对其进行修改即可</p>
 </blockquote>
 
-<p>重启 Prometheus 服务：</p>
+<p>模板文件准备完成后还需要修改 alertmanager 的配置文件，增加对企业微信告警的支持：</p>
 
-<pre><code class="language-bash">$ systemctl reload prometheus.service
+<pre><code class="language-bash">global:
+  wechat_api_url: 'https://qyapi.weixin.qq.com/cgi-bin/'
+...
+receivers:
+- name: 'wechat'
+  wechat_configs:
+  - send_resolved: true
+    to_party: 'xx'
+    agent_id: 'xx'
+    corp_id: 'xx'
+    api_secret: 'xx'
 </code></pre>
 
-<p>之后就可以通过 Prometheus 服务获取该主机的相关资源了</p>
+<p>配置文件修改后重启 prometheus 和 alertmanager 服务即可。</p>
 
-<h2 id="安装-grafana-展示工具">安装 Grafana 展示工具</h2>
+<h2 id="alertmanager-集成-slack-告警">Alertmanager 集成 Slack 告警</h2>
 
-<p>Grafana 我们主要用它来展示 Prometheus 的监控指标的，这样可以直观查看各节点或者服务的状态，本次安装 grafana 我们直接用 yum 安装即可，具体操作也可以参考<a href="http://docs.grafana.org/installation/rpm/">官方文档</a></p>
+<p>Alertmanager 的 Slack 告警和微信告警配置类似，在配置 slack 告警前需要注册一个 slack 账号和对应的频道，具体怎么搞，超出了本文档的范围，还请自行百度或者谷歌吧。</p>
 
-<p>首先，需要准备 grafana 的 repo 源，手动添加 <code>/etc/yum.repos.d/grafana.repo</code>文件：</p>
+<p>准备 slack 告警模板：</p>
 
-<pre><code class="language-bash">[grafana]
-name=grafana
-baseurl=https://packages.grafana.com/oss/rpm
-repo_gpgcheck=1
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.grafana.com/gpg.key
-sslverify=1
-sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+<pre><code class="language-bash">{{ define &quot;__single_message_title&quot; }}{{ range .Alerts.Firing }}{{ .Labels.alertname }} @ {{ .Annotations.identifier }}{{ end }}{{ range .Alerts.Resolved }}{{ .Labels.alertname }} @ {{ .Annotations.identifier }}{{ end }}{{ end }}
+{{ define &quot;custom_title&quot; }}[{{ .Status | toUpper }}{{ if eq .Status &quot;firing&quot; }}:{{ .Alerts.Firing | len }}{{ end }}] {{ if or (and (eq (len .Alerts.Firing) 1) (eq (len .Alerts.Resolved) 0)) (and (eq (len .Alerts.Firing) 0) (eq (len .Alerts.Resolved) 1)) }}{{ template &quot;__single_message_title&quot; . }}{{ end }}{{ end }}
+{{ define &quot;custom_slack_message&quot; }}
+{{ if or (and (eq (len .Alerts.Firing) 1) (eq (len .Alerts.Resolved) 0)) (and (eq (len .Alerts.Firing) 0) (eq (len .Alerts.Resolved) 1)) }}
+{{ range .Alerts.Firing }}{{ .Annotations.description }}{{ end }}{{ range .Alerts.Resolved }}{{ .Annotations.description }}{{ end }}
+{{ else }}
+{{ if gt (len .Alerts.Firing) 0 }}
+*Alerts Firing:*
+{{ range .Alerts.Firing }}- {{ .Annotations.identifier }}: {{ .Annotations.description }}
+{{ end }}{{ end }}
+{{ if gt (len .Alerts.Resolved) 0 }}
+*Alerts Resolved:*
+{{ range .Alerts.Resolved }}- {{ .Annotations.identifier }}: {{ .Annotations.description }}
+{{ end }}{{ end }}
+{{ end }}
+{{ end }}
 </code></pre>
 
-<p>然后就可以用 yum 安装 grafana 了：</p>
+<p>完整 salck 模板文件参见<a href="https://github.com/yeaheo/prometheus-huang/blob/master/alertmanager-tmpl/slack.tmpl">slack.tmpl</a></p>
 
-<pre><code class="language-bash">$ yum makecache
-$ yum -y install grafana
+<blockquote>
+<p>需要说明的是之前下载的官方模板文件已经包含了salck的相关配置，但是输出信息不是很友好，建议直接下载上面模板文件并将其放在模板目录下</p>
+</blockquote>
+
+<p>配置 salck 告警：</p>
+
+<pre><code class="language-bash">...
+receivers:
+- name: 'slack-channel'
+  slack_configs:
+  - channel: #xx  (频道)
+    api_url: 'https://hooks.slack.com/services/TGGQZ8GPN/BGGRF1XNG/xx'
+    icon_url: 'https://avatars3.githubusercontent.com/u/3380462'
+    send_resolved: true
+    title: '{{ template &quot;custom_title&quot; . }}'
+    text: '{{ template &quot;custom_slack_message&quot; . }}'
 </code></pre>
 
-<p>等待安装完成后就可以启动服务了：</p>
+<p>配置文件修改后重启 prometheus 和 alertmanager 服务即可。</p>
 
-<pre><code class="language-bash">$ service grafana-server start
-</code></pre>
-
-<p>服务启动后 grafana 默认监听在 3000 端口 ，可以通过 <code>http://localhost:3000</code> 访问 grafana 的 ui 界面，默认登录账号密码为 <code>admin/admin</code> ，第一次登录需要我们重置密码。</p>
-
-<p>当 grafana 的页面可以正常访问后，我们就可以添加数据源了，具体操作流程如下：</p>
-
-<p>&ldquo;Configration&rdquo;&mdash;&ldquo;Data Sources&rdquo; 然后可以按照下图所示进行配置，需要注意的是 prometheus 的地址需要根据实际情况做修改。</p>
-
-<p><img src="https://wx3.sinaimg.cn/large/b258d7f7ly1g0ncsgb0r7j20d00gxjud.jpg" alt="grafana 设置数据源" /></p>
-
-<p>grafana 的数据源配置完成后，可以导入一个 dashboard 模板文件，建议节点模板使用 <a href="https://grafana.com/dashboards/8919">node_exporter 展示面板模板</a></p>
-
-<p>导入成功后完整的监控面板如下所示：</p>
-
-<p><img src="https://wx4.sinaimg.cn/large/b258d7f7ly1g0nclvl010j21ef0o7ai3.jpg" alt="node_exporter 监控面板" /></p>
+<p>cheers!!!</p>
 
 
                 
@@ -456,15 +510,10 @@ $ yum -y install grafana
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/prometheus-introduction/" data-toggle="tooltip" data-placement="top" title="Prometheus 监控入门介绍">&larr;
+                        <a href="/post/prometheus-addons-installation/" data-toggle="tooltip" data-placement="top" title="Prometheus 安装和基本配置">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/prometheus-alertmanager-config/" data-toggle="tooltip" data-placement="top" title="Prometheus Alertmanager 基本配置">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 
