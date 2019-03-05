@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，Docker 使用谷歌公司自己开发的 GO 语言实现。">
+    <meta name="description" content="Harbor 是存放镜像的私有仓库，我们在企业内为了能更好的管理我们的业务镜像，我们可以将其上传至我们的私有镜像仓库，本次利用 Harbor 搭建自己的私有镜像仓库">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>容器 Docker 入门介绍-吕啸腾的博客</title>
+    <title>Harbor 私有镜像仓库安装配置-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/docker-introduction/">
+    <link rel="canonical" href="/post/harbor-installation/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx1.sinaimg.cn/large/b258d7f7ly1fz0o7npb4uj21ja0lo443.jpg')
+        background-image: url('https://wx4.sinaimg.cn/large/b258d7f7ly1g0ngh35u98j21ja0lo1b6.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,12 +143,20 @@
                 <div class="post-heading">
                     <div class="tags">
                         
+                        <a class="tag" href="/tags/harbor" title="Harbor">
+                            Harbor
+                        </a>
+                        
                         <a class="tag" href="/tags/docker" title="Docker">
                             Docker
                         </a>
                         
+                        <a class="tag" href="/tags/docker-compose" title="Docker-compose">
+                            Docker-compose
+                        </a>
+                        
                     </div>
-                    <h1>容器 Docker 入门介绍</h1>
+                    <h1>Harbor 私有镜像仓库安装配置</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -156,7 +164,7 @@
 			         Aeric
 			 
 			on 
-			Thursday, July 26, 2018
+			Thursday, January 10, 2019
                         
                     </span>
                 </div>
@@ -182,32 +190,134 @@
                 <header>
                     <h2>TOC</h2>
                 </header>
-                
-                
-                <p>Docker 最初是由 dotCloud 公司创始人 Solomon Hykes 发起的一个公司的内部项目，并于 2013 年实现开源，主要项目代码在 <a href="https://github.com/moby/moby">GitHub</a> 上维护。</p>
-
-<p>Docker 使用谷歌公司自己开发的 <a href="https://golang.org/">GO 语言</a> 实现的，基于 Linux 内核的 cgroup、 namespace 和 AUFS 类的 Union FS 等技术，对进程进行隔离封装，属于操作系统层面的虚拟化技术。由于隔离的进程独立于宿主和其它的隔离的进程，因此也称其为容器。</p>
-
-<p>Docker 容器格式最初实现是基于 <a href="https://linuxcontainers.org/lxc/introduction/">LXC</a> ，从 0.7 版本以后开始去除 LXC，转而使用自行开发的 <a href="https://github.com/docker/libcontainer">libcontainer</a>，从 1.11 开始，则进一步演进为使用 <a href="https://github.com/opencontainers/runc">runC</a> 和 <a href="https://github.com/containerd/containerd">containerd</a>。</p>
-
-<p>Docker 在容器的基础上，进行了进一步的封装，从文件系统、网络互联到进程隔离等等，极大的简化了容器的创建和维护。使得 Docker 技术比虚拟机技术更为轻便、快捷。</p>
-
-<p>Docker 作为操作系统层面的虚拟化技术，它和传统的虚拟化技术相比有以下几个特点：</p>
-
+                <nav id="TableOfContents">
 <ul>
-<li><strong>更轻便、快捷的应用</strong>。 传统虚拟机技术是虚拟出一套硬件后，在其上运行一个完整操作系统，然后在该系统上再运行所需应用进程，而容器内的应用进程直接运行于宿主的内核，容器内没有自己的内核，而且也没有进行硬件虚拟。</li>
-<li><strong>更高效的利用系统资源</strong>。 由于容器不需要进行硬件虚拟以及运行完整操作系统等额外开销，Docker 对系统资源的利用率更高。</li>
-<li><strong>更快速的应用启动时间</strong>。 传统的虚拟机技术启动应用服务往往需要数分钟，而 Docker 容器应用，由于直接运行于宿主内核，无需启动完整的操作系统，因此可以做到秒级、甚至毫秒级的启动时间。</li>
-<li><strong>近乎一致的应用运行环境</strong>。 Docker 的镜像提供了除内核外完整的运行时环境，确保了应用运行环境一致性。</li>
-<li><strong>持续交付和部署</strong>。 使用 Docker 可以通过定制应用镜像来实现持续集成、持续交付、部署。开发人员可以通过 Dockerfile 来进行镜像构建，并结合 持续集成(Continuous Integration) 系统进行集成测试，而运维人员则可以直接在生产环境中快速部署该镜像，甚至结合 持续部署(Continuous Delivery/Deployment) 系统进行自动部署。</li>
-<li><strong>可以更快的迁移</strong>。 由于 Docker 确保了执行环境的一致性，使得应用的迁移更加容易。可以说 Docker 可以在任何平台上运行，因为镜像的一致性也保证了运行环境的一致性，所以迁移起来更加的快速高效。</li>
-
-<li><p><strong>更轻松的维护和扩展</strong>。 Docker 使用的分层存储以及镜像的技术，使得应用重复部分的复用更为容易，也使得应用的维护更新更加简单，基于基础镜像进一步扩展镜像也更加的容易。</p></li>
-
-<li><p>下面的图片比较了 Docker 和传统虚拟化方式的不同：
-<img src="https://wx2.sinaimg.cn/large/b258d7f7ly1fzlhdmhe64j20j8079q33.jpg" alt="传统虚拟化技术" title="传统虚拟化技术" />
-<img src="https://wx1.sinaimg.cn/large/b258d7f7ly1fzlhdltddwj20j505ft8t.jpg" alt="docker虚拟化技术" title="docker 容器虚拟化技术" /></p></li>
+<li>
+<ul>
+<li><a href="#下载离线安装包">下载离线安装包</a></li>
+<li><a href="#准备-harbor-配置文件">准备 Harbor 配置文件</a></li>
+<li><a href="#执行相关脚本安装-harbor">执行相关脚本安装 Harbor</a></li>
+</ul></li>
 </ul>
+</nav>
+                
+                
+
+<p>在一个企业里，企业自有的私有仓库是必须的，配置私有 docker 镜像仓库 harbor，为的是将自己构建的镜像 push 到私有镜像仓库中，方便以后拉取。</p>
+
+<p>Harbor 的官方站点: <a href="https://goharbor.io/">https://goharbor.io/</a></p>
+
+<p>Harbor 的 GitHub 地址: <a href="https://github.com/goharbor/harbor">https://github.com/goharbor/harbor</a></p>
+
+<p>Harbor 的安装和配置可以参考: <a href="https://github.com/goharbor/harbor/blob/master/docs/installation_guide.md">Installation and Configuration Guide</a></p>
+
+<p>Harbor 的安装方式有在线安装和离线安装两种，由于网络的问题，本次安装采用离线安装的方式搭建私有镜像仓库。</p>
+
+<p>安装 Harbor 需要满足以下软件条件：</p>
+
+<table>
+<thead>
+<tr>
+<th>Software</th>
+<th>Version</th>
+<th>Description</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Python</td>
+<td>version 2.7 or higher</td>
+<td>Note that you may have to install Python on Linux distributions (Gentoo, Arch) that do not come with a Python interpreter installed by default</td>
+</tr>
+
+<tr>
+<td>Docker engine</td>
+<td>version 1.10 or higher</td>
+<td>For installation instructions, please refer to: <a href="https://docs.docker.com/engine/installation/">https://docs.docker.com/engine/installation/</a></td>
+</tr>
+
+<tr>
+<td>Docker Compose</td>
+<td>version 1.6.0 or higher</td>
+<td>For installation instructions, please refer to: <a href="https://docs.docker.com/compose/install/">https://docs.docker.com/compose/install/</a></td>
+</tr>
+
+<tr>
+<td>Openssl</td>
+<td>latest is preferred</td>
+<td>Generate certificate and keys for Harbor</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="下载离线安装包">下载离线安装包</h2>
+
+<p>首先需要从 <a href="https://github.com/goharbor/harbor/releases">Harbor 的官方下载地址</a> 下载我们需要安装的软件离线安装包，harbor 服务具体安装步骤如下：</p>
+
+<pre><code class="language-bash">1、下载并解压软件包;
+2、配置 `harbor.cfg` 文件;
+3、执行脚本文件 `install.sh` 进行安装;
+</code></pre>
+
+<p>下载离线安装包如下：</p>
+
+<pre><code class="language-bash">$ mkdir /opt/soft
+$ cd /opt/soft
+$ wget https://storage.googleapis.com/harbor-releases/release-1.7.0/harbor-offline-installer-&lt;HARBOR_VERSION&gt;.tgz
+</code></pre>
+
+<p>解压安装包至指定安装目录：</p>
+
+<pre><code class="language-bash">$ cd /opt/soft
+$ tar xvf harbor-offline-installer-&lt;HARBOR_VERSION&gt;.tgz -C /srv/
+# harbor 安装目录为 /srv/ 目录
+
+$ cd /srv/
+</code></pre>
+
+<h2 id="准备-harbor-配置文件">准备 Harbor 配置文件</h2>
+
+<p>这里我们只是简单的安装 Harbor 如果需要更个性化的配置 harbor 可以参考 <a href="https://github.com/goharbor/harbor/blob/master/docs/installation_guide.md">Installation and Configuration Guide</a></p>
+
+<p>在这里，我们只需要修改以下参数：</p>
+
+<pre><code class="language-bash">......
+hostname = 192.168.8.69
+......
+harbor_admin_password = admin123.
+......
+</code></pre>
+
+<blockquote>
+<p><code>harbor.cfg</code> 只需要修改 hostname 为你自己的机器 IP 或者域名，harbor 默认的 db 连接密码为 root123，可以自己修改，也可以保持默认，harbor 初始管理员密码为 Harbor12345，可以根据自己需要进行修改，email 选项是用来忘记密码重置用的，根据实际情况修改，如果使用 163 或者 qq 邮箱等，需要使用授权码进行登录，此时就不能使用密码登录了，否则会提示无效。</p>
+</blockquote>
+
+<p>Harbor 的配置文件还是比较简单的。如果需要配置 Harbor 支持 HTTPS 可以参考 <a href="https://github.com/goharbor/harbor/blob/master/docs/configure_https.md">Configuring Harbor with HTTPS Access</a></p>
+
+<h2 id="执行相关脚本安装-harbor">执行相关脚本安装 Harbor</h2>
+
+<p>配置文件修改完成后就可以执行安装脚本安装 Harbor 相关服务了：</p>
+
+<pre><code class="language-bash">$ cd /srv/harbor
+$ ./install.sh
+</code></pre>
+
+<p>等待安装过程即可，因为是离线安装，速度还是不错的。如果需要自定义安装 Harbor 的其他功能可以参考 <a href="https://github.com/goharbor/harbor/blob/master/docs/installation_guide.md">Configuration Guide</a></p>
+
+<p>待脚本执行完成后使用 docke-compose ps 即可查看，常用命令包含以下几个：</p>
+
+<pre><code class="language-bash">docker-compose up -d      # 后台启动，如果容器不存在根据镜像自动创建
+docker-compose down -v    # 停止容器并删除容器
+docker-compose start      # 启动容器，容器不存在就无法启动，不会自动创建镜像
+docker-compose stop       # 停止容器
+</code></pre>
+
+<blockquote>
+<p>其实上面是停止 <code>docker-compose.yml</code> 中定义的所有容器，默认情况下 <code>docker-compose</code>就是操作同目录下的 <code>docker-compose.yml</code>文件，所以我们需要切换到 harbor 目录下才可以执行 docker-compose 相关命令，如果使用其他 <code>yml</code>文件，可以使用 <code>-f</code> 自己指定。</p>
+</blockquote>
+
+<p>至此，harbor 基本安装完成！</p>
 
 
                 
@@ -255,9 +365,14 @@
                 <hr>
                 <ul class="pager">
                     
+                    <li class="previous">
+                        <a href="/post/k8s-metrics-server-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群安装Metrics Server">&larr;
+                            Previous Post</a>
+                    </li>
+                    
                     
                     <li class="next">
-                        <a href="/post/docker-installation-guide/" data-toggle="tooltip" data-placement="top" title="CentOS 7 安装 Docker">Next
+                        <a href="/post/harbor-upgrade-guide/" data-toggle="tooltip" data-placement="top" title="记一次harbor的升级之旅">Next
                             Post &rarr;</a>
                     </li>
                     

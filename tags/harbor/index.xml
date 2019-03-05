@@ -29,5 +29,14 @@
       <description>之前安装的 harbor版本是 v1.6的版本，由于在 v1.7版本中新增加了对 helm的支持，所以为了更充分的利用 harbor 镜像仓库，我们将进行一次升级</description>
     </item>
     
+    <item>
+      <title>Harbor 私有镜像仓库安装配置</title>
+      <link>https://aeric.io/post/harbor-installation/</link>
+      <pubDate>Thu, 10 Jan 2019 11:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/harbor-installation/</guid>
+      <description>在一个企业里，企业自有的私有仓库是必须的，配置私有 docker 镜像仓库 harbor，为的是将自己构建的镜像 push 到私有镜像仓库中，方便以后拉取。 Harbor 的官方站</description>
+    </item>
+    
   </channel>
 </rss>

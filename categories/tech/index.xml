@@ -111,6 +111,15 @@
     </item>
     
     <item>
+      <title>Harbor 私有镜像仓库安装配置</title>
+      <link>https://aeric.io/post/harbor-installation/</link>
+      <pubDate>Thu, 10 Jan 2019 11:37:01 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/harbor-installation/</guid>
+      <description>在一个企业里，企业自有的私有仓库是必须的，配置私有 docker 镜像仓库 harbor，为的是将自己构建的镜像 push 到私有镜像仓库中，方便以后拉取。 Harbor 的官方站</description>
+    </item>
+    
+    <item>
       <title>Kubernetes集群安装Metrics Server</title>
       <link>https://aeric.io/post/k8s-metrics-server-installation/</link>
       <pubDate>Fri, 04 Jan 2019 12:23:36 +0800</pubDate>
