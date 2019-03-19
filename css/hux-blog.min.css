@@ -11,3 +11,6 @@ footer .copyright a{
 a{
 	transition: 0.5s !important;
 }
+footer .list-inline a:focus{
+ 	color: #404040!important
+ }
