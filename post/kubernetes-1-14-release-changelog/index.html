@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="Helm Chart 是用来封装 Kubernetes 原生应用程序的一系列 YAML 文件。可以在你部署应用的时候自定义应用程序的一些 Metadata，以便于应用程序的分发。本文档在 Kubernetes 集群安装 Helm">
+    <meta name="description" content="2019年3月26日 Kubernetes1.14 版本正式发布，这是2019年发布的第一个版本，距离上个版本发布刚好又是三个月的时间。今天把该版本的主要特性说明一下">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>K8S 包管理工具 Helm - 安装-吕啸腾的博客</title>
+    <title>Kubernetes 1.14 更新日志-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-helm-installation/">
+    <link rel="canonical" href="/post/kubernetes-1-14-release-changelog/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -133,7 +133,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://wx4.sinaimg.cn/large/b258d7f7ly1fz7feo1nrej21ja0loamp.jpg')
+        background-image: url('https://wx2.sinaimg.cn/large/b258d7f7ly1g1h6zsp170j21ja0lo77x.jpg')
     }
 </style>
 <header class="intro-header">
@@ -143,16 +143,16 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/helm" title="Helm">
-                            Helm
-                        </a>
-                        
                         <a class="tag" href="/tags/kubernetes" title="Kubernetes">
                             Kubernetes
                         </a>
                         
+                        <a class="tag" href="/tags/release" title="Release">
+                            Release
+                        </a>
+                        
                     </div>
-                    <h1>K8S 包管理工具 Helm - 安装</h1>
+                    <h1>Kubernetes 1.14 更新日志</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -160,7 +160,7 @@
 			         Aeric
 			 
 			on 
-			Tuesday, January 15, 2019
+			Wednesday, March 27, 2019
                         
                     </span>
                 </div>
@@ -190,161 +190,101 @@
 <ul>
 <li>
 <ul>
-<li><a href="#安装-helm-客户端">安装 Helm 客户端</a></li>
-<li><a href="#安装-helm-服务端-tiller">安装 Helm 服务端 Tiller</a></li>
-<li><a href="#kubernetes-rbac配置">Kubernetes RBAC配置</a></li>
-<li><a href="#验证-tiller-是否安装成功">验证 Tiller 是否安装成功</a></li>
-<li><a href="#卸载-helm-服务端-tiller">卸载 Helm 服务端 Tiller</a></li>
+<li>
+<ul>
+<li><a href="#对windows节点的生产级支持">对Windows节点的生产级支持</a></li>
+<li><a href="#新的kubectl说明文档与徽标">新的Kubectl说明文档与徽标</a></li>
+<li><a href="#kubectl-与-kustomize集成">Kubectl 与 Kustomize集成</a></li>
+<li><a href="#kubectl-插件机制发布稳定版本">Kubectl 插件机制发布稳定版本</a></li>
+<li><a href="#持久本地卷迎来通用版本">持久本地卷迎来通用版本</a></li>
+<li><a href="#pid-限制正转向-beta-测试版本">PID 限制正转向 beta 测试版本</a></li>
+<li><a href="#其他值得注意的功能">其他值得注意的功能</a></li>
+<li><a href="#参考链接">参考链接</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
                 
                 
 
-<p>前期在 Kubernetes 集群中部署应用多少有点不适应，因为我们需要维护的资源配置清单 yaml 文件随着应用的增加，对应的文件也越来越多，这就在一定程度上导致了以下几个问题：</p>
+<p>总的来说，本次发布的版本主要有以下几大显著特性：</p>
 
 <ul>
-<li>如何管理，编辑和更新这些这些分散的kubernetes应用配置文件</li>
-<li>可不可以把一套的相关配置文件作为一个应用进行管理</li>
-<li>如何分发和重用 kubernetes 的应用配置</li>
+<li>对于管理 Windows node 的生产级支持；</li>
+<li>Kubectl 的说明文档经过完全重写，并启用新域名:<a href="https://kubectl.docs.kubernetes.io">https://kubectl.docs.kubernetes.io</a>，还有了自己的 logo 和吉祥物 kubee-cuddle；</li>
+<li>Kubectl 与 Kustomize集成；</li>
+<li>Kubectl 插件机制发布稳定版本；</li>
+<li>持久本地卷迎来通用版本；</li>
+<li>PID 限制正转向 beta 测试版本；</li>
 </ul>
 
-<p>而 Helm 的出现就解决了这些问题，它封装 Kubernetes 原生应用程序的一系列 YAML 文件。可以在你部署应用的时候自定义应用程序的一些 Metadata，以便于应用程序的分发。下面在 Kubernetes 集群中部署 Helm，具体过程参考如下描述：</p>
+<p>当然还有其他比较受关注的增强功能，具体功能可以参考<a href="https://kubernetes.io/blog/2019/03/25/kubernetes-1-14-release-announcement/">官方文档</a></p>
 
-<p>Helm 的安装方式很多，这里采用二进制的方式安装。具体安装方法可以参考 <a href="https://docs.helm.sh/">Helm 的官方帮助文档</a>。同时安装 Helm 也可以参考 <a href="https://github.com/helm/helm/blob/master/docs/install.md">GitHub 官方文档</a></p>
+<h3 id="对windows节点的生产级支持">对Windows节点的生产级支持</h3>
 
-<h2 id="安装-helm-客户端">安装 Helm 客户端</h2>
+<p>在此之前，Kubernetes 当中的 Windows 节点一直处于 beta 测试阶段，旨在允许众多用户以实验性方式体验Kubernetes for Windows 容器的实际价值。如今，Kubernetes 开始正式支持将 Windows 节点添加为工作节点并部署Windows 容器，从而确保庞大的 Windows 应用程序生态系统得以利用我们平台提供的强大功能。这意味着以往在Windows 应用程序与 Linux 应用程序层面投入大量资金的企业不必再寻求独立的协调器管理自身工作负载，而能够不再受到具体操作系统类型的影响提升整体部署的运营效率。</p>
 
-<p><strong>使用官方提供的脚本一键安装</strong></p>
+<p>本次 Kubernetes 为 Windows 容器带来的核心功能特性包括：</p>
 
-<pre><code class="language-bash">$ curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get &gt; get_helm.sh
-$ chmod 700 get_helm.sh
-$ ./get_helm.sh
-</code></pre>
+<ul>
+<li>支持将 Windows Server 2019 引入工作节点与容器；</li>
+<li>支持采用 Azure-CNI、 OVN- Kubernetes 以及 Flannel 的树外网络；</li>
+<li>改进了对 Pod、服务类型、工作负载控制器以及指标/配额的支持能力，以便与 Linux 容器的自有功能实现更为紧密的匹配；</li>
+</ul>
 
-<p><strong>手动下载二进制文件安装</strong></p>
+<h3 id="新的kubectl说明文档与徽标">新的Kubectl说明文档与徽标</h3>
 
-<pre><code class="language-bash"># Helm 安装版本为 v2.9.1，其他版本类似
+<p>Kubectl 工具的说明文档经过完全重写，其重点在于利用声明性 Resource Config 实现资源管理。这份文档目前以独立站点的形式发布，采用 Gitbook 风格，在新的文档站点中看到新的 kubectl 徽标与吉祥物 kubee-cuddle 的外观，具体可以访问 <a href="https://kubectl.docs.kubernetes.io">https://kubectl.docs.kubernetes.io</a> 查看。</p>
 
-# 下载 Helm
-$ wget https://storage.googleapis.com/kubernetes-helm/helm-v2.9.1-linux-amd64.tar.gz
-# 解压 Helm
-$ tar -zxvf helm-v2.9.1-linux-amd64.tar.gz
-# 复制客户端执行文件到 bin 目录下
-$ cp linux-amd64/helm /usr/local/bin/
-</code></pre>
+<h3 id="kubectl-与-kustomize集成">Kubectl 与 Kustomize集成</h3>
 
-<h2 id="安装-helm-服务端-tiller">安装 Helm 服务端 Tiller</h2>
+<p>Kustomize 的声明性 Resource Config 创作功能现在可以通过 <code>-k</code> 标记，适用于 apply 及 get 等命令，同时 Kustomize 子命令可以在 kubectl 中获取。</p>
 
-<p>Tiller 是以 Deployment 方式部署在 Kubernetes 集群中的，只需使用以下指令便可简单的完成安装。</p>
+<p>Kustomize 旨在帮助用户创作及复用包含 Kubernetes 各原生概念的 Resource Config。用户现在能够利用 <code>kubectl apply -k dir/</code> 将拥有 <code>kustomization.yaml</code> 的目录适用于集群。此外，用户也可以将定制化 Resource Config 发送至stdout，而无需通过 <code>kubectl kustomize dir/</code> 加以应用。这些新的功能被记录在新的说明文档当中，具体请参阅<a href="https://kubectl.docs.kubernetes.io">https://kubectl.docs.kubernetes.io</a></p>
 
-<pre><code class="language-bash">helm init --upgrade
-</code></pre>
+<p>继续通过 Kubernetes 的 kustomize repo 对 Kustomize 子命令进行开发。最新的 Kustomize 功能将以独立的Kustomize 二进制文件（发布至 kustomize repo）的形式更为频率地发布，且在每一轮 Kubernetes 发布之前在kubectl 中得以更新。</p>
 
-<p>在缺省配置下， Helm 会利用 <code>gcr.io/kubernetes-helm/tiller</code>  镜像在 Kubernetes 集群上安装配置 Tiller；并且利用 &ldquo;<a href="https://kubernetes-charts.storage.googleapis.com&quot;">https://kubernetes-charts.storage.googleapis.com&quot;</a> 作为缺省的 <code>stable repository</code>  的地址。由于在国内可能无法访问 <code>gcr.io</code>，<code>storage.googleapis.com</code> 等域名，阿里云容器服务为此提供了镜像站点。</p>
+<h3 id="kubectl-插件机制发布稳定版本">Kubectl 插件机制发布稳定版本</h3>
 
-<p>更换阿里云镜像站点如下：</p>
+<p>kubectl 插件机制允许开发人员将自己的定制化 kubectl 子命令以独立二进制文件的形式发布出来。这些成果将可帮助 kubectl 与附加 porcelain（例如添加 set-ns 命令）实现更多新的高级功能。</p>
 
-<pre><code class="language-bash"># 配置阿里云镜像安装并把默认仓库设置为阿里云上的镜像仓库
-$ helm init --upgrade --tiller-image registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.9.1 --stable-repo-url https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
-</code></pre>
+<p>各插件必须采用 <code>kubectl-</code> 作为命名前缀，并保存在用户的 <code>$PATH</code> 当中。在通用版本中，插件机制已经迎来大幅简化，目前其整体效果类似于 Git 插件系统。</p>
 
-<p>安装完成后，将看到如下类似信息输出：</p>
+<h3 id="持久本地卷迎来通用版本">持久本地卷迎来通用版本</h3>
 
-<pre><code class="language-bash">$ helm init --upgrade
-$HELM_HOME has been configured at /Users/test/.helm.
+<p>这项功能正逐渐稳定，允许用户将本地连接存储作为持久卷来源。</p>
 
-Tiller (the helm server side component) has been installed into your Kubernetes Cluster.
-Happy Helming!
-</code></pre>
+<p>考虑到实际性能与成本要求，分布式文件系统与数据库往往成为持久性本地存储的主要用例。与云服务供应商相比较，本地 SSD 一般可提供超越远程磁盘的性能水平。而与裸机方案相比，除了性能之外，本地存储通常成本更低，亦是配置分布式文件系统的一项必要条件。</p>
 
-<h2 id="kubernetes-rbac配置">Kubernetes RBAC配置</h2>
+<h3 id="pid-限制正转向-beta-测试版本">PID 限制正转向 beta 测试版本</h3>
 
-<p>自 Kubernetes 1.6 版本开始，API Server 启用了 RBAC 授权。而目前的 Tiller 部署没有定义授权的 ServiceAccount ，这会导致访问 API Server 时被拒绝。我们可以采用如下方法，明确为 Tiller 部署添加授权。</p>
+<p>进程 ID（PID）属于 Linux 主机上的一种基本资源。毫无疑问，我们无法接受在未出现任何其它资源限制的情况下，因为进程 ID 不足而影响任务运行，甚至导致主机稳定性降低。管理员需要相关机制以确保用户 Pod 中的 PID 不会被耗尽，否则各类主机守护程序（包括运行时与 kubelet 等）都将受到影响。此外，管理员还需要确保在各Pod 之间限制 PID，从而保证其不致影响到运行在节点上的其它工作负载。</p>
 
-<p>创建 Kubernetes 的服务帐号和角色绑定：</p>
+<p>作为 beta 功能，管理员可以通过将每个 Pod 的 PID 数量设定默认值，以提供 pod-to-pod PID隔离。此外，作为alpha 功能，管理员可以通过节点可分配的方式，为用户 pod 保留大量可分配的 PID，从而启用节点到 pod 的 PID隔离。该社区希望在下一版本中将此功能转为测试版。</p>
 
-<pre><code class="language-bash">kubectl create serviceaccount --namespace kube-system tiller
-kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-</code></pre>
+<h3 id="其他值得注意的功能">其他值得注意的功能</h3>
 
-<p>或者利用如下的 yaml 配置文件创建服务账号和授权，创建 <code>rbac-config.yaml</code>：</p>
+<p>Pod 优先级和抢占使 Kubernetes 调度程序能够首先调度更重要的 Pod，当集群资源不足时，它会删除不太重要的pod，以便为更重要的 Pod 创建空间。重要性由优先级指定。具体可以参考<a href="https://github.com/kubernetes/enhancements/issues/564">[1]</a></p>
 
-<pre><code>apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: tiller
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: tiller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: tiller
-    namespace: kube-system
-</code></pre>
+<p>Pod Readiness Gates 为 pod 准备就绪提供了外部反馈的扩展点。具体可以参考<a href="https://github.com/kubernetes/enhancements/issues/580">[2]</a></p>
 
-<p>在 Kubernetes 集群中授权：</p>
+<p>强化默认的 RBAC 的 <code>clusterrolebingdings</code> 发现能力，其移除了原本默认可通过未授权访问的 API 集发现功能，旨在提升 CRD 隐私性以及默认集群的总体安全水平。具体可以参考<a href="https://github.com/kubernetes/enhancements/issues/789">[3]</a></p>
 
-<pre><code class="language-bash">$ kubectl apply -f rbac-config.yaml
-</code></pre>
+<p>目前 Kubernetes 1.14 已可通过 GitHub 进行下载。要开始使用 Kubernetes，建议首先查看各交互式教程。同时也可以利用 kubeadm 轻松安装本次发布的 1.14 版本。</p>
 
-<p>为 Tiller 设置帐号：</p>
+<h3 id="参考链接">参考链接</h3>
 
-<pre><code class="language-bash"># 使用 kubectl patch 更新 API 对象
-$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{&quot;spec&quot;:{&quot;template&quot;:{&quot;spec&quot;:{&quot;serviceAccount&quot;:&quot;tiller&quot;}}}}'
-deployment.extensions &quot;tiller-deploy&quot; patched
-</code></pre>
+<ul>
+<li><p><a href="https://github.com/kubernetes/kubernetes/releases/tag/v1.14.0">https://github.com/kubernetes/kubernetes/releases/tag/v1.14.0</a></p></li>
 
-<p>查看是否授权成功:</p>
+<li><p><a href="https://kubernetes.io/docs/tutorials/">https://kubernetes.io/docs/tutorials/</a></p></li>
 
-<pre><code class="language-bash">$ kubectl get deploy --namespace kube-system tiller-deploy --output yaml | grep serviceAccount
-      serviceAccount: tiller
-      serviceAccountName: tiller
-</code></pre>
+<li><p><a href="https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/">https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/</a></p></li>
 
-<p>当出现上述信息表示已经授权成功！</p>
+<li><p><a href="https://mp.weixin.qq.com/s/eQRpRfMVs9G2lfdk5rdAEg">https://mp.weixin.qq.com/s/eQRpRfMVs9G2lfdk5rdAEg</a></p></li>
 
-<h2 id="验证-tiller-是否安装成功">验证 Tiller 是否安装成功</h2>
-
-<p>当 Helm 和 Tiller 安装完成并且已经授权成功后，可以通过 <code>kubectl</code> 检查是否安装完成：</p>
-
-<pre><code class="language-bash">$ kubectl get pods -n kube-system | grep tiller
-tiller-deploy-7fdbf6766f-w9wd9          1/1       Running   0          2d
-
-$ helm version
-Client: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
-Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
-</code></pre>
-
-<blockquote>
-<p>有时候当我们执行 <code>helm version</code> 时，会输出连接 <code>Server</code> 端时和 <code>socat</code> 相关的报错的信息，这是我们没有安装 <code>socat</code> 软件，我们需要在所有集群节点上安装 <code>socat</code></p>
-</blockquote>
-
-<p>在所有节点上安装 <code>socat</code> :</p>
-
-<pre><code class="language-bash">$ yum install socat -y
-</code></pre>
-
-<p>当安装完成后再执行 <code>helm version</code> 一般就不会报错了，当输出类似如下信息时表示 Helm 和 Tiller 安装成功。</p>
-
-<pre><code class="language-bash">$ helm version
-Client: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
-Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c7c5868466912eebdf6664e7390ebe710&quot;, GitTreeState:&quot;clean&quot;}
-</code></pre>
-
-<h2 id="卸载-helm-服务端-tiller">卸载 Helm 服务端 Tiller</h2>
-
-<p>如果你需要在 Kubernetes 中卸载已部署的 Tiller，可使用以下命令完成卸载：</p>
-
-<pre><code class="language-bash">$ helm reset
-</code></pre>
+<li><p><a href="https://kubernetes.io/blog/2019/03/25/kubernetes-1-14-release-announcement/">https://kubernetes.io/blog/2019/03/25/kubernetes-1-14-release-announcement/</a></p></li>
+</ul>
 
 
                 
@@ -393,15 +333,10 @@ Server: &amp;version.Version{SemVer:&quot;v2.9.1&quot;, GitCommit:&quot;20adb27c
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/k8s-helm-introduction/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 介绍">&larr;
+                        <a href="/post/prometheus-alertmanager-config/" data-toggle="tooltip" data-placement="top" title="Prometheus Alertmanager 基本配置">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/k8s-helm-application/" data-toggle="tooltip" data-placement="top" title="K8S 包管理工具 Helm - 应用">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 
