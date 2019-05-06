@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://aeric.io/post/nginx-ingress-https-redirect/</loc>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://aeric.io/post/kubernetes-1-14-release-changelog/</loc>
     <lastmod>2019-03-27T10:49:54+08:00</lastmod>
   </url>
@@ -181,7 +186,7 @@
   
   <url>
     <loc>https://aeric.io/</loc>
-    <lastmod>2019-03-27T10:49:54+08:00</lastmod>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -233,8 +238,14 @@
   </url>
   
   <url>
+    <loc>https://aeric.io/tags/ingress/</loc>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://aeric.io/tags/kubernetes/</loc>
-    <lastmod>2019-03-27T10:49:54+08:00</lastmod>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -270,7 +281,7 @@
   
   <url>
     <loc>https://aeric.io/post/</loc>
-    <lastmod>2019-03-27T10:49:54+08:00</lastmod>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -299,7 +310,7 @@
   
   <url>
     <loc>https://aeric.io/categories/tech/</loc>
-    <lastmod>2019-03-27T10:49:54+08:00</lastmod>
+    <lastmod>2019-05-06T17:35:43+08:00</lastmod>
     <priority>0</priority>
   </url>
   

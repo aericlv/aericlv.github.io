@@ -8,14 +8,14 @@
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <meta name="description" content="在Kubernetes集群中，一般Node节点上的服务主要是kubelet和kube-proxy服务，当然还有flannel网络插件等服务，本文档主要说明部署Node节点上的服务">
+    <meta name="description" content="Nginx Ingress 默认并没有启用 https，如果我们需要实现 Ingress 的 https 方式访问，还需要我们配置 annotation 或者 configmap，这里主要说明一下 Ingress 如何通过 annotation 配置 https">
     
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>Kubernetes集群部署Node节点服务-吕啸腾的博客</title>
+    <title>Nginx Ingress 配置 HTTPS-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/post/k8s-nodes-installation/">
+    <link rel="canonical" href="/post/nginx-ingress-https-redirect/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -140,7 +140,7 @@
 
 <style type="text/css">
     header.intro-header {
-        background-image: url('https://aericio.oss-cn-beijing.aliyuncs.com/images/bg/Au2Fld.jpg')
+        background-image: url('https://aericio.oss-cn-beijing.aliyuncs.com/images/bg/gdd40dqv.jpg')
     }
 </style>
 <header class="intro-header">
@@ -154,12 +154,12 @@
                             Kubernetes
                         </a>
                         
-                        <a class="tag" href="/tags/docker" title="Docker">
-                            Docker
+                        <a class="tag" href="/tags/ingress" title="Ingress">
+                            Ingress
                         </a>
                         
                     </div>
-                    <h1>Kubernetes集群部署Node节点服务</h1>
+                    <h1>Nginx Ingress 配置 HTTPS</h1>
                     <h2 class="subheading"></h2>
                     <span class="meta">
 			Posted by 
@@ -167,7 +167,7 @@
 			         Aeric
 			 
 			on 
-			Friday, November 30, 2018
+			Monday, May 6, 2019
                         
                     </span>
                 </div>
@@ -199,8 +199,10 @@
 <ul>
 <li>
 <ul>
-<li><a href="#安装并配置-kubelet-服务">安装并配置 kubelet 服务</a></li>
-<li><a href="#安装并配置-kube-proxy-服务">安装并配置 kube-proxy 服务</a></li>
+<li><a href="#创建证书">创建证书</a></li>
+<li><a href="#创建-secret">创建 secret</a></li>
+<li><a href="#配置-ingress-开启-tls">配置 Ingress 开启 TLS</a></li>
+<li><a href="#测试">测试</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -208,250 +210,128 @@
                 
                 
 
-<p>kubernetes node 节点包含如下组件：</p>
+<p>对于 Nginx Ingress 的 TLS 配置，<a href="https://kubernetes.github.io/ingress-nginx/user-guide/tls/">官方文档</a>已经写得很清楚了，只是有的地方只是点了一下，并没有做出详细的说明，可以说还是有点坑的，哈哈。这里我实际从头开始操作一下，希望可以帮到大家，少走弯路。</p>
 
-<pre><code class="language-bash">Flanneld
-Docker:docker直接用yum安装即可
-kubelet
-kube-proxy
-注意：每台 node 上都需要安装 flannel，master 节点上可以不必安装。
-</code></pre>
+<p>Nginx Ingress 的安装部署，可以参照<a href="https://kubernetes.github.io/ingress-nginx/deploy/">官方文档</a>进行安装，安装其实很简单，按照官方文档一步步安装就行了。这里我就不搞了，本次 Kubernetes 集群我用的是阿里云的集群，Nginx Ingress 已经安装完成了。</p>
 
-<p>我们在前面已经配置了 Flanneld 和 Docker 服务，具体参见 <a href="../k8s-flannel-and-docker-config">配置 docker 及 flanneld 服务</a></p>
-
-<p>我们本次只安装 <code>kubelet</code> 和 <code>kube-proxy</code> 服务。</p>
+<p>Nginx Ingress 配置 TLS 支持 HTTPS 方式访问一般就分为三个步骤：<strong>1.制作证书；2.创建证书的 secret；3.在 Ingress 开启证书</strong></p>
 
 <blockquote>
-<p>kubernets <code>v1.9</code> 相对于 kuberentes <code>v1.6</code> 集群，必须关闭swap，否则kubelet启动将失败。
-关闭 <code>swap</code> 只需修改 <code>/etc/fstab</code> 将，<code>swap</code> 系统注释掉。
-如果要临时关闭，可以用 <code>swapoff -a</code>， <code>-a</code> 表示关闭所有交换设备。</p>
+<p>证书这一块我们可以自签证书（不受信任），也可以使用正规机构颁发的证书</p>
 </blockquote>
 
-<h3 id="安装并配置-kubelet-服务">安装并配置 kubelet 服务</h3>
+<h3 id="创建证书">创建证书</h3>
 
-<p>kubelet 启动时向 <code>kube-apiserver</code> 发送 <code>TLS bootstrapping</code> 请求，需要先将 <code>bootstrap token</code>文件中的 <code>kubelet-bootstrap</code> 用户赋予 <code>system:node-bootstrapper cluster</code> 角色(role)， 然后 kubelet 才能有权限创建认证请求(certificate signing requests)：</p>
+<p>首先我们使用我们自签的证书：</p>
 
-<pre><code class="language-bash">cd /etc/kubernetes
-kubectl create clusterrolebinding kubelet-bootstrap \
-  --clusterrole=system:node-bootstrapper \
-  --user=kubelet-bootstrap
+<pre><code class="language-bash"># 生成 CA 自签证书
+mkdir cert &amp;&amp; cd cert
+openssl genrsa -out ca-key.pem 2048
+openssl req -x509 -new -nodes -key ca-key.pem -days 10000 -out ca.pem -subj &quot;/CN=kube-ca&quot;
+
+# 编辑 openssl 配置
+cp /etc/pki/tls/openssl.cnf .
+vim openssl.cnf
+
+# 主要修改如下
+[req]
+req_extensions = v3_req # 这行默认注释关着的 把注释删掉
+# 下面配置是新增的
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = saas-delta.xx.com
+
+# 生成证书
+openssl genrsa -out ingress-key.pem 2048
+openssl req -new -key ingress-key.pem -out ingress.csr -subj &quot;/CN=kube-ingress&quot; -config openssl.cnf
+openssl x509 -req -in ingress.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out ingress.pem -days 365 -extensions v3_req -extfile openssl.cnf
+</code></pre>
+
+<p>自签证书生成后就可以用证书和证书密钥创建 secret 了，这里为了方便，我用的是正规机构颁发的证书，如下所示：</p>
+
+<pre><code class="language-bash">👍 ls
+1_xx.cn_bundle.crt 2_xx.cn.key
+</code></pre>
+
+<h3 id="创建-secret">创建 secret</h3>
+
+<p>创建 secret 用如下命令创建即可：</p>
+
+<pre><code class="language-bash">kubectl create secret tls ${CERT_NAME} --key ${KEY_FILE} --cert ${CERT_FILE}
+</code></pre>
+
+<p>我实际操作的指令：</p>
+
+<pre><code class="language-bash">kubectl create secret tls ingress-secret --key 2_xx.cn.key --cert 1_xx.cn_bundle.crt -n saas-delta
 </code></pre>
 
 <blockquote>
-<p><code>--user=kubelet-bootstrap</code> 是在 <code>/etc/kubernetes/token.csv</code> 文件中指定的用户名，同时也写入了 <code>/etc/kubernetes/bootstrap.kubeconfig</code> 文件；</p>
+<p>创建 secret 时尽量要和 ingress 实例在一个 namespace，这里我的是 saas-delta 命名空间</p>
 </blockquote>
 
-<p>下载最新的 kubelet 和 kube-proxy 二进制文件,因为我们之前已经下载了 kubernetes 的 server 软件包，所以再贴一下，不再赘述：</p>
+<p>创建 secret 后可以通过集群查看：</p>
 
-<pre><code class="language-bash">wget https://dl.k8s.io/v1.9.6/kubernetes-server-linux-amd64.tar.gz
-tar -xzvf kubernetes-server-linux-amd64.tar.gz
-cd kubernetes
-tar -xzvf  kubernetes-src.tar.gz
-cp -r ./server/bin/{kube-proxy,kubelet} /usr/local/bin/
+<pre><code class="language-bash">👍 kubectl get secrets -n saas-delta
+NAME                  TYPE                                  DATA   AGE
+default-token-dppr2   kubernetes.io/service-account-token   3      27h
+ingress-secret        kubernetes.io/tls                     2      83m
 </code></pre>
 
-<p><strong>创建 kubelet 的 System Unit 配置文件</strong></p>
+<h3 id="配置-ingress-开启-tls">配置 Ingress 开启 TLS</h3>
 
-<p>kubelet 的 service 配置文件: <code>/usr/lib/systemd/system/kubelet.service</code></p>
+<p>创建 secret 后，我们需要修改 ingress 的定义文件，添加 <code>tls</code> 相关内容：</p>
 
-<pre><code class="language-bash">[Unit]
-Description=Kubernetes Kubelet Server
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=docker.service
-Requires=docker.service
-
-[Service]
-WorkingDirectory=/var/lib/kubelet
-EnvironmentFile=-/etc/kubernetes/config
-EnvironmentFile=-/etc/kubernetes/kubelet
-ExecStart=/usr/local/bin/kubelet \
-            $KUBE_LOGTOSTDERR \
-            $KUBE_LOG_LEVEL \
-            $KUBELET_API_SERVER \
-            $KUBELET_ADDRESS \
-            $KUBELET_PORT \
-            $KUBELET_HOSTNAME \
-            $KUBE_ALLOW_PRIV \
-            $KUBELET_POD_INFRA_CONTAINER \
-            $KUBELET_ARGS
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
+<pre><code>apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: saas-app-nginx
+  namespace: saas-delta
+  annotations:
+    kubernetes.io/ingress.class: &quot;nginx&quot;
+    nginx.ingress.kubernetes.io/ssl-redirect: &quot;true&quot;
+spec:
+  tls:
+  - hosts:
+    - saas-delta.xx.cn
+    secretName: ingress-secret
+  rules:
+  - host: saas-delta.xx.cn
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: saas-app-nginx
+          servicePort: 80
 </code></pre>
 
-<p>kubelet 完整 Systemd Unit 文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/systemd/kubelet.service">kubelet.service</a></p>
+<p>这里有个小问题，http 跳转到 https 官方文档上是这样写的：“By default the controller redirects HTTP clients to the HTTPS port 443 using a 308 Permanent Redirect response if TLS is enabled for that Ingress.” 大概意思就是 “默认情况下，如果为该Ingress启用了TLS，则控制器会使用308永久重定向响应将HTTP客户端重定向到HTTPS端口443。” 但是在我这个阿里云的集群上好像并不好使，需要将<code>nginx.ingress.kubernetes.io/ssl-redirect</code>设置为 <code>true</code>才可以。</p>
 
-<blockquote>
-<p>在启动 kubelet 之前，需要先手动创建 <code>/var/lib/kubelet</code> 目录。</p>
-</blockquote>
+<p>修改完 ingress 配置文件后直接使用即可：</p>
 
-<p><strong>创建 kubelet 的配置文件</strong></p>
-
-<blockquote>
-<p>本次安装的 kubernetes 的版本是 <code>v1.9.6</code> 版本，相对于较早版本 <code>v1.6</code>，有点变化：取消了 <code>KUBELET_API_SERVER</code> 的配置，而改用 kubeconfig 文件来定义 master 地址。 所以需要我们注释掉 <code>KUBELET_API_SERVER</code> 配置。</p>
-</blockquote>
-
-<p>修改后的 kubelet 配置文件 <code>/etc/kubernetes/kubelet</code> 参数如下：</p>
-
-<pre><code class="language-bash">###
-## kubernetes kubelet (minion) config
-#
-## The address for the info server to serve on (set to 0.0.0.0 or &quot;&quot; for all interfaces)
-KUBELET_ADDRESS=&quot;--address=192.168.8.67&quot;
-#
-## The port for the info server to serve on
-#KUBELET_PORT=&quot;--port=10250&quot;
-#
-## You may leave this blank to use the actual hostname
-KUBELET_HOSTNAME=&quot;--hostname-override=k8s-node1&quot;
-#
-## location of the api-server
-#KUBELET_API_SERVER=&quot;--api-servers=http://192.168.8.66:8080&quot;   v1.8+ 版本需要注释掉此参数
-#
-## pod infrastructure container
-KUBELET_POD_INFRA_CONTAINER=&quot;--pod-infra-container-image=192.168.8.69/library/pause-amd64:3.0&quot;
-#
-## Add your own!
-KUBELET_ARGS=&quot;--cgroup-driver=systemd --cluster-dns=10.254.0.2 --bootstrap-kubeconfig=/etc/kubernetes/bootstrap.kubeconfig --kubeconfig=/etc/kubernetes/kubelet.kubeconfig  --cert-dir=/etc/kubernetes/ssl --cluster-domain=cluster.local --hairpin-mode promiscuous-bridge --serialize-image-pulls=false --cgroups-per-qos=false --enforce-node-allocatable=&quot;&quot; &quot;
+<pre><code class="language-bash">kubectl apply -f app-ingress.yaml
 </code></pre>
 
-<p><strong>参数说明</strong>：</p>
+<p>一个 Ingress 只能使用一个 secret，也就是说只能用一个证书,或者说如果你在一个 Ingress 中配置了多个域名，那么使用 TLS 的话必须保证证书支持该 Ingress 下所有域名；并且这个 secretName 一定要放在上面域名列表最后位置，否则会报错 <code>did not find expected key</code> 无法创建；同时上面的 hosts 段下域名必须跟下面的 rules 中完全匹配</p>
 
-<ul>
-<li><code>--address</code> 不能设置为 127.0.0.1，否则后续 Pods 访问 kubelet 的 API 接口时会失败，因为 Pods 访问的 127.0.0.1 指向自己而不是 kubelet；</li>
-<li>如果设置了 <code>--hostname-override</code> 选项，则 <code>ube-proxy</code> 也需要设置该选项，否则会出现找不到 Node 的情况；</li>
-<li><code>--cgroup-driver</code> 配置成 <code>systemd</code>，不要使用cgroup，否则在 CentOS 系统中 kubelet 将启动失败（保持docker和kubelet中的cgroup driver配置一致即可，不一定非使用systemd）。</li>
-<li><code>--experimental-bootstrap-kubeconfig</code> 指向 <code>bootstrap kubeconfig</code> 文件，kubelet 使用该文件中的用户名和 token 向 kube-apiserver 发送 TLS Bootstrapping 请求；</li>
-<li>管理员通过了 CSR 请求后，kubelet 自动在 <code>--cert-dir</code> 目录创建证书和私钥文件(kubelet-client.crt 和 kubelet-client.key)，然后写入 <code>--kubeconfig</code> 文件；</li>
-<li>建议在 <code>--kubeconfig</code> 配置文件中指定 <code>kube-apiserver</code> 地址，如果未指定 <code>--api-servers</code> 选项，则必须指定 <code>--require-kubeconfig</code> 选项后才从配置文件中读取 kube-apiserver 的地址，否则 kubelet 启动后将找不到 kube-apiserver (日志中提示未找到 API Server），kubectl get nodes 不会返回对应的 Node 信息;</li>
-<li><code>--cluster-dns</code> 指定 kubedns 的 Service IP(可以先分配，后续创建 kubedns 服务时指定该 IP)，<code>--cluster-domain</code> 指定域名后缀，这两个参数同时指定后才会生效；</li>
-<li><code>--cluster-domain</code> 指定 pod 启动时 <code>/etc/resolve.conf</code> 文件中的 search domain ，起初我们将其配置成了 cluster.local.，这样在解析 service 的 DNS 名称时是正常的，可是在解析 headless service 中的 FQDN pod name 的时候却错误，因此我们将其修改为 cluster.local，去掉嘴后面的 ”点号“ 就可以解决该问题，关于 kubernetes 中的域名/服务名称解析请参见我的另一篇文章。</li>
-<li><code>--kubeconfig=/etc/kubernetes/kubelet.kubeconfig</code> 中指定的 <code>kubelet.kubeconfig</code> 文件在第一次启动 kubelet 之前并不存在，请看下文，当通过CSR请求后会自动生成 <code>kubelet.kubeconfig</code>文件，如果你的节点上已经生成了 <code>~/.kube/config</code> 文件，你可以将该文件拷贝到该路径下，并重命名为 <code>kubelet.kubeconfig</code>，所有 node 节点可以共用同一个 <code>kubelet.kubeconfig</code> 文件，这样新添加的节点就不需要再创建CSR请求就能自动添加到 kubernetes 集群中。同样，在任意能够访问到 kubernetes 集群的主机上使用 <code>kubectl --kubeconfig</code> 命令操作集群时，只要使用 <code>~/.kube/config</code> 文件就可以通过权限认证，因为这里面已经有认证信息并认为你是 admin 用户，对集群拥有所有权限。</li>
-<li><code>KUBELET_POD_INFRA_CONTAINER</code> 是基础镜像容器，这里我用的是私有镜像仓库地址，大家部署的时候需要修改为自己的镜像。 pod-infrastructure 镜像是 Redhat 制作的，大小接近80M，下载比较耗时，其实该镜像并不运行什么具体进程，可以使用 Google 的 pause 镜像 <code>gcr.io/google_containers/pause-amd64:3.0</code>，这个镜像只有300多K，比较容易下载和配置。</li>
-</ul>
+<p>Kubernetes Ingress 默认情况下，当不配置证书时，会默认提供一个 TLS 证书，也就是说你 Ingress 中配置错了，比如写了 2 个 <code>secretName</code>、或者 <code>hosts</code> 段中缺了某个域名，那么对于写了多个 <code>secretName</code> 的情况，所有域名全会走默认证书，对于 <code>hosts</code> 缺了某个域名的情况，缺失的域名将会走默认证书，部署时一定要验证一下证，更新 Ingress 证书可能需要等一段时间才会生效</p>
 
-<p>完整 kubelet 配置文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/config/kubelet">kubelet</a></p>
+<h3 id="测试">测试</h3>
 
-<blockquote>
-<p>其他 node 节点上的 kubelet 配置文件对应的 IP 地址需要改为每台 node 节点的 IP 地址。
-主要需要修改 <code>KUBELET_ADDRESS</code> 和 <code>KUBELET_HOSTNAME</code> 参数。
-后期如果需要加 node ，需要修改其他机器的 hosts 文件，否则无法查看新 node 上的 pod 日志。</p>
-</blockquote>
+<p>配置完成后就可以进行测试了，这里我用的是 DNS 解析的方式将 hosts 解析到了 ingress 的公网IP上：</p>
 
-<p><strong>启动 kubelet 服务</strong></p>
-
-<p>我们修改完相关参数后就可以启动 kubelet 服务了。</p>
-
-<pre><code class="language-bash">systemctl daemon-reload
-systemctl start kubelet
-systemctl enable kubelet
-systemctl status kubelet
+<pre><code class="language-bash">👍 curl -I http://saas-delta.xx.cn
+HTTP/1.1 308 Permanent Redirect
+Date: Mon, 06 May 2019 10:49:13 GMT
+Content-Type: text/html
+Content-Length: 164
+Connection: keep-alive
+Location: https://saas-delta.xx.cn/
 </code></pre>
 
-<p><strong>通过 kublet 的 TLS 证书请求</strong></p>
-
-<p>kubelet 首次启动时向 kube-apiserver 发送证书签名请求，必须通过后 kubernetes 系统才会将该 Node 加入到集群。</p>
-
-<p>查看未授权的 CSR 请求:</p>
-
-<pre><code class="language-bash">$ kubectl get csr
-NAME        AGE       REQUESTOR           CONDITION
-csr-2b308   4m        kubelet-bootstrap   Pending
-$ kubectl get nodes
-No resources found.
-</code></pre>
-
-<p>通过 CSR 请求:</p>
-
-<pre><code class="language-bash">$ kubectl certificate approve csr-2b308
-certificatesigningrequest &quot;csr-2b308&quot; approved
-[root@k8s-master kubernetes]# kubectl get nodes
-NAME        STATUS    ROLES     AGE       VERSION
-k8s-node1   Ready     &lt;none&gt;    34d       v1.9.6
-</code></pre>
-
-<p>此时，自动生成了 kubelet kubeconfig 文件和公私钥：</p>
-
-<pre><code class="language-bash">[root@k8s-node1 ~]# ls -l /etc/kubernetes/kubelet.kubeconfig
--rw------- 1 root root 2215 Apr  6 18:15 /etc/kubernetes/kubelet.kubeconfig
-[root@k8s-node1 ~]# ls -l /etc/kubernetes/ssl/kubelet*
--rw-r--r-- 1 root root 1042 Apr  6 18:15 /etc/kubernetes/ssl/kubelet-client.crt
--rw------- 1 root root  227 Apr  6 18:08 /etc/kubernetes/ssl/kubelet-client.key
--rw-r--r-- 1 root root 1111 Apr  6 18:08 /etc/kubernetes/ssl/kubelet.crt
--rw------- 1 root root 1679 Apr  6 18:08 /etc/kubernetes/ssl/kubelet.key
-</code></pre>
-
-<p>假如你更新 kubernetes 的证书，只要没有更新 token.csv，当重启 kubelet 后，该 node 就会自动加入到 kuberentes 集群中，而不会重新发送 certificaterequest，也不需要在 master 节点上执行 <code>kubectl certificate approve</code>操作。前提是不要删除 node 节点上的<code>/etc/kubernetes/ssl/kubelet*</code> 和 <code>/etc/kubernetes/kubelet.kubeconfig</code> 文件。否则kubelet启动时会提示找不到证书而失败。
-&gt; 如果启动 kubelet 的时候见到证书相关的报错，有个 trick 可以解决这个问题，可以将 master 节点上的 <code>~/.kube/config</code> 文件（该文件在安装 kubectl 命令行工具这一步中将会自动生成）拷贝到 node 节点的 <code>/etc/kubernetes/kubelet.kubeconfig</code> 位置，这样就不需要通过 CSR，当 kubelet 启动后就会自动加入的集群中。</p>
-
-<h3 id="安装并配置-kube-proxy-服务">安装并配置 kube-proxy 服务</h3>
-
-<p>安装 conntrack</p>
-
-<pre><code class="language-bash">yum -y install conntrack-tools
-</code></pre>
-
-<p><strong>创建 kube-proxy 的 Systemd Unit文件</strong></p>
-
-<p>unit 文件路径：<code>/usr/lib/systemd/system/kube-proxy.service</code></p>
-
-<pre><code class="language-bash">[Unit]
-Description=Kubernetes Kube-Proxy Server
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=network.target
-
-[Service]
-EnvironmentFile=-/etc/kubernetes/config
-EnvironmentFile=-/etc/kubernetes/proxy
-ExecStart=/usr/local/bin/kube-proxy \
-        $KUBE_LOGTOSTDERR \
-        $KUBE_LOG_LEVEL \
-        $KUBE_MASTER \
-        $KUBE_PROXY_ARGS
-Restart=on-failure
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
-</code></pre>
-
-<p>完整 system unit 文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/systemd/kube-proxy.service">kube-proxy.service</a></p>
-
-<p><strong>创建 kube-proxy 的配置文件</strong></p>
-
-<p>kube-poxy 配置文件路径： <code>/etc/kubernetes/proxy</code></p>
-
-<pre><code class="language-bash">###
-# kubernetes proxy config
-
-# default config should be adequate
-
-# Add your own!
-KUBE_PROXY_ARGS=&quot;--bind-address=192.168.8.67 --hostname-override=k8s-node1 --kubeconfig=/etc/kubernetes/kube-proxy.kubeconfig --cluster-cidr=10.254.0.0/16&quot;
-</code></pre>
-
-<p><strong>参数说明</strong></p>
-
-<ul>
-<li><code>--hostname-override</code> 参数值必须与 kubelet 的值一致，否则 kube-proxy 启动后会找不到该 Node，从而不会创建任何 iptables 规则；</li>
-<li><code>kube-proxy</code> 根据 <code>-cluster-cidr</code> 判断集群内部和外部流量，指定 <code>--cluster-cidr</code> 或 <code>--masquerade-all</code> 选项后 kube-proxy 才会对访问 Service IP 的请求做 SNAT；</li>
-<li><code>--kubeconfig</code> 指定的配置文件嵌入了 kube-apiserver 的地址、用户名、证书、秘钥等请求和认证信息；</li>
-</ul>
-
-<p>预定义的 RoleBinding cluster-admin 将User system:kube-proxy 与 Role system:node-proxier 绑定，该 Role 授予了调用 kube-apiserver Proxy 相关 API 的权限；</p>
-
-<p>完整 kube-proxy 配置文件参见 <a href="https://github.com/yeaheo/kubernetes-manifests/blob/master/config/proxy">proxy</a></p>
-
-<p><strong>启动 kube-proxy 服务</strong></p>
-
-<pre><code class="language-bash">systemctl daemon-reload
-systemctl start kube-proxy
-systemctl enable kube-proxy
-systemctl status kube-proxy
-</code></pre>
-
-<p>至此，整个 kubernetes 集群安装完成，剩下的工作就是在集群上安装各种必要组件了，包括 dns、dashboard、heapster等等；</p>
+<p>由上述结果可知该配置生效。</p>
 
 
                 
@@ -500,15 +380,10 @@ systemctl status kube-proxy
                 <ul class="pager">
                     
                     <li class="previous">
-                        <a href="/post/k8s-flannel-and-docker-config/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群配置Flannel服务">&larr;
+                        <a href="/post/kubernetes-1-14-release-changelog/" data-toggle="tooltip" data-placement="top" title="Kubernetes 1.14 更新日志">&larr;
                             Previous Post</a>
                     </li>
                     
-                    
-                    <li class="next">
-                        <a href="/post/k8s-dns-addons-installation/" data-toggle="tooltip" data-placement="top" title="Kubernetes集群部署DNS插件">Next
-                            Post &rarr;</a>
-                    </li>
                     
                 </ul>
 

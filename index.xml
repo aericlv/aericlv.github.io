@@ -6,10 +6,19 @@
     <description>Recent content on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 27 Mar 2019 10:49:54 +0800</lastBuildDate>
+    <lastBuildDate>Mon, 06 May 2019 17:35:43 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Nginx Ingress 配置 HTTPS</title>
+      <link>https://aeric.io/post/nginx-ingress-https-redirect/</link>
+      <pubDate>Mon, 06 May 2019 17:35:43 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/nginx-ingress-https-redirect/</guid>
+      <description>对于 Nginx Ingress 的 TLS 配置，官方文档已经写得很清楚了，只是有的地方只是点了一下，并没有做出详细的说明，可以说还是有点坑的，哈哈。这里我实际从头开始操作</description>
+    </item>
     
     <item>
       <title>Kubernetes 1.14 更新日志</title>

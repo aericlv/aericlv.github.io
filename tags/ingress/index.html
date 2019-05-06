@@ -13,9 +13,9 @@
     <meta name="keyword"  content="吕啸腾, lvxiaoteng, Lvxiaoteng, 吕啸腾的网络日志, 吕啸腾的博客, Aeric Blog, 博客, 个人网站, 互联网, Web, 云原生, PaaS, Istio, Kubernetes, 微服务, Microservice">
     <link rel="shortcut icon" href="/img/favicon.ico">
 
-    <title>TOOLS-吕啸腾的博客</title>
+    <title>Ingress-吕啸腾的博客</title>
 
-    <link rel="canonical" href="/categories/tools/">
+    <link rel="canonical" href="/tags/ingress/">
 
     <link rel="stylesheet" href="/css/iDisqus.min.css"/>
 	
@@ -168,37 +168,19 @@
             
 
 <div class="post-preview">
-    <a href="https://aeric.io/post/mkcert-valid-https-certificates-for-localhost/">
+    <a href="https://aeric.io/post/nginx-ingress-https-redirect/">
         <h2 class="post-title">
-            mkcert:本地有效的https证书
+            Nginx Ingress 配置 HTTPS
         </h2>
 	
         <div class="post-content-preview">
 	
-            随着HTTPS的越来越普及，现在绝大数的WEB网站已经支持了全站HTTPS，来防止网络攻击者观察或注入页面内容等，这里介绍一种在本地生成TLS证书的工具:mkcert
+            Nginx Ingress 默认并没有启用 https，如果我们需要实现 Ingress 的 https 方式访问，还需要我们配置 annotation 或者 configmap，这里主要说明一下 Ingress 如何通过 annotation 配置 https
         
         </div>
     </a>
     <p class="post-meta">
-    Posted by      Aeric Monday, January 14, 2019
-    </p>
-</div>
-<hr>
-
-<div class="post-preview">
-    <a href="https://aeric.io/post/pass-tool-guide/">
-        <h2 class="post-title">
-            使用PASS密码管理器管理密码
-        </h2>
-	
-        <div class="post-content-preview">
-	
-            PASS 是 Linux 上的一个简单的命令行密码管理器，它将密码存储在一个 gpg 加密后的文件里。这些加密后的文件很好地组织按目录结构存放，方便我们对密码进行管理。
-        
-        </div>
-    </a>
-    <p class="post-meta">
-    Posted by      Aeric Sunday, July 29, 2018
+    Posted by      Aeric Monday, May 6, 2019
     </p>
 </div>
 <hr>
@@ -320,7 +302,7 @@
            <ul class="list-inline"> 
                
                <li>
-                   <a href="https://aeric.io/categories/tools/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
+                   <a href="https://aeric.io/tags/ingress/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
                        <span class="fa-stack fa-lg">
                            <i class="fa fa-circle fa-stack-2x"></i>
                            <i class="fa fa-rss fa-stack-1x fa-inverse"></i>
@@ -437,7 +419,7 @@
                 <ul class="list-inline text-center">
                    
                    <li>
-                       <a href="https://aeric.io/categories/tools/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
+                       <a href="https://aeric.io/tags/ingress/index.xml" rel="alternate" type="application/rss+xml" title="Aeric Blog" >
                            <span class="fa-stack fa-lg">
                                <i class="fa fa-circle fa-stack-2x"></i>
                                <i class="fa fa-rss fa-stack-1x fa-inverse"></i>
