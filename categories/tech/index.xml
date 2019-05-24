@@ -6,10 +6,19 @@
     <description>Recent content in TECH on Aeric Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 06 May 2019 17:35:43 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 23 May 2019 21:23:59 +0800</lastBuildDate>
     
 	<atom:link href="https://aeric.io/categories/tech/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>探究 Kubernetes 的亲和性调度</title>
+      <link>https://aeric.io/post/kubernetes-affinity/</link>
+      <pubDate>Thu, 23 May 2019 21:23:59 +0800</pubDate>
+      
+      <guid>https://aeric.io/post/kubernetes-affinity/</guid>
+      <description>我们在使用 Kubernetes 集群调度应用 POD 的时候，一般情况下我们都是用集群的自动调度机制选择某个节点，默认情况 Kubernetes 集群一般分为预选和优选两种调度策略，计算得分</description>
+    </item>
     
     <item>
       <title>Nginx Ingress 配置 HTTPS</title>
